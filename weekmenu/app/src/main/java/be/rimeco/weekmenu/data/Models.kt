@@ -103,3 +103,12 @@ fun AppState.recipe(id: String?): Recipe? = id?.let { rid -> recipes.firstOrNull
 
 fun AppState.allTags(): List<String> =
     (Tags.defaults + recipes.flatMap { it.tags } + prefs.preferredTags + prefs.excludedTags).distinct()
+
+/** De planningsweek loopt van zaterdag (winkeldag) tot en met vrijdag. */
+object Week {
+    val START: DayOfWeek = DayOfWeek.SATURDAY
+
+    fun startOf(date: LocalDate): LocalDate = date.with(java.time.temporal.TemporalAdjusters.previousOrSame(START))
+
+    fun days(start: LocalDate): List<LocalDate> = (0L..6L).map { start.plusDays(it) }
+}

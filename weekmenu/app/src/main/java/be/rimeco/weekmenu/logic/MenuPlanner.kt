@@ -4,6 +4,7 @@ import be.rimeco.weekmenu.data.AppState
 import be.rimeco.weekmenu.data.MenuEntry
 import be.rimeco.weekmenu.data.Recipe
 import be.rimeco.weekmenu.data.Tags
+import be.rimeco.weekmenu.data.Week
 import be.rimeco.weekmenu.data.defaultPersons
 import be.rimeco.weekmenu.data.recipe
 import java.time.DayOfWeek
@@ -33,8 +34,8 @@ object MenuPlanner {
      */
     fun suggest(state: AppState, dates: List<LocalDate>, replaceExisting: Boolean, rnd: Random = Random.Default): Result {
         val p = state.prefs
-        // Context = volledige weken (ma-zo) van de gevraagde dagen, zodat "opnieuw gooien" van 1 dag de rest van de week respecteert.
-        val window = dates.flatMap { d -> val mon = d.with(DayOfWeek.MONDAY); (0L..6L).map { mon.plusDays(it).toString() } }.toSet()
+        // Context = volledige weken (za-vr) van de gevraagde dagen, zodat "opnieuw gooien" van 1 dag de rest van de week respecteert.
+        val window = dates.flatMap { d -> Week.days(Week.startOf(d)).map { it.toString() } }.toSet()
 
         // Werkmenu: dagen die we gaan (her)invullen zijn leeg.
         val working = state.menu.toMutableMap()
@@ -50,7 +51,9 @@ object MenuPlanner {
         val picks = linkedMapOf<String, String>()
         val unfilled = mutableListOf<LocalDate>()
 
-        targets.forEachIndexed { index, d ->
+        // Dagen met een tijdslimiet eerst: anders kan het weekend de snelle recepten opgebruiken.
+        val order = if (p.maxMinutesWeekdays > 0) targets.sortedBy { if (isWeekday(it)) 0 else 1 } else targets
+        order.forEachIndexed { index, d ->
             val windowIds = window.mapNotNull { working[it]?.recipeId }.toSet()
             fun repeated(r: Recipe): Boolean {
                 if (p.avoidRepeatDays <= 0) return false

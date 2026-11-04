@@ -48,10 +48,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import be.rimeco.weekmenu.data.AppState
 import be.rimeco.weekmenu.data.MenuEntry
+import be.rimeco.weekmenu.data.Week
 import be.rimeco.weekmenu.data.entryFor
 import be.rimeco.weekmenu.data.recipe
 import kotlinx.coroutines.launch
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.time.temporal.IsoFields
@@ -59,7 +59,7 @@ import java.util.Locale
 
 private val NL: Locale = Locale.forLanguageTag("nl-BE")
 
-fun currentMonday(): LocalDate = LocalDate.now().with(DayOfWeek.MONDAY)
+fun currentWeekStart(): LocalDate = Week.startOf(LocalDate.now())
 
 fun LocalDate.dayShort(): String = dayOfWeek.getDisplayName(TextStyle.SHORT, NL).replaceFirstChar { it.uppercase() }
 fun LocalDate.monthShort(): String = month.getDisplayName(TextStyle.SHORT, NL)
@@ -67,9 +67,9 @@ fun LocalDate.longLabel(): String = "${dayOfWeek.getDisplayName(TextStyle.FULL, 
 
 @Composable
 fun MenuScreen(vm: AppViewModel, state: AppState, snackbar: SnackbarHostState) {
-    var weekStart by rememberSaveable { mutableStateOf(currentMonday().toString()) }
+    var weekStart by rememberSaveable { mutableStateOf(currentWeekStart().toString()) }
     val start = LocalDate.parse(weekStart)
-    val days = (0L..6L).map { start.plusDays(it) }
+    val days = Week.days(start)
     val today = LocalDate.now()
     val scope = rememberCoroutineScope()
     var planDialog by remember { mutableStateOf(false) }
@@ -97,8 +97,8 @@ fun MenuScreen(vm: AppViewModel, state: AppState, snackbar: SnackbarHostState) {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton({ weekStart = start.minusWeeks(1).toString() }) { Icon(Icons.Filled.KeyboardArrowLeft, "Vorige week") }
-            Column(Modifier.weight(1f).clickable { weekStart = currentMonday().toString() }, horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Week ${start.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Column(Modifier.weight(1f).clickable { weekStart = currentWeekStart().toString() }, horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Week ${start.plusDays(2).get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 Text(
                     "${start.dayOfMonth} ${start.monthShort()} – ${start.plusDays(6).dayOfMonth} ${start.plusDays(6).monthShort()}",
                     style = MaterialTheme.typography.bodySmall,

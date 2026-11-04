@@ -48,9 +48,10 @@ class AppSmokeTest {
         assertEquals(7, planned)
 
         // Persons: default 3 op weekdagen, 4 in het weekend
-        val monday = LocalDate.now().with(java.time.DayOfWeek.MONDAY)
-        assertEquals(3, vm.state.value.menu[monday.toString()]?.persons ?: 3)
-        assertEquals(4, vm.state.value.menu[monday.plusDays(5).toString()]?.persons ?: 4)
+        val monday = be.rimeco.weekmenu.data.Week.startOf(LocalDate.now())   // zaterdag
+        assertEquals(java.time.DayOfWeek.SATURDAY, monday.dayOfWeek)
+        assertEquals(4, vm.state.value.menu[monday.toString()]?.persons ?: 4)
+        assertEquals(3, vm.state.value.menu[monday.plusDays(6).toString()]?.persons ?: 3)
 
         // Naar boodschappen
         rule.onNodeWithText("Naar boodschappen").performClick()

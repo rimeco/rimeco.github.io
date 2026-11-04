@@ -6,6 +6,7 @@ import be.rimeco.weekmenu.data.Persistence
 import be.rimeco.weekmenu.data.Prefs
 import be.rimeco.weekmenu.data.Recipe
 import be.rimeco.weekmenu.data.Tags
+import be.rimeco.weekmenu.data.Week
 import be.rimeco.weekmenu.data.defaultPersons
 import be.rimeco.weekmenu.data.entryFor
 import be.rimeco.weekmenu.logic.MenuPlanner
@@ -18,7 +19,7 @@ import java.time.LocalDate
 import kotlin.random.Random
 
 class MenuPlannerTest {
-    private val mon = LocalDate.of(2026, 11, 2)
+    private val mon = LocalDate.of(2026, 11, 7) // zaterdag = eerste dag van de planningsweek
     private val week = (0L..6L).map { mon.plusDays(it) }
 
     private fun r(id: String, rating: Int = 0, tags: List<String> = emptyList(), minutes: Int = 0) =
@@ -29,11 +30,18 @@ class MenuPlannerTest {
 
     @Test fun defaultPersonsFollowWeekday() {
         val p = Prefs()
-        assertEquals(3, p.defaultPersons(mon))               // maandag
-        assertEquals(3, p.defaultPersons(mon.plusDays(4)))   // vrijdag
-        assertEquals(4, p.defaultPersons(mon.plusDays(5)))   // zaterdag
-        assertEquals(4, p.defaultPersons(mon.plusDays(6)))   // zondag
-        assertEquals(4, state(emptyList()).entryFor(mon.plusDays(6)).persons)
+        assertEquals(4, p.defaultPersons(mon))               // zaterdag
+        assertEquals(4, p.defaultPersons(mon.plusDays(1)))   // zondag
+        assertEquals(3, p.defaultPersons(mon.plusDays(2)))   // maandag
+        assertEquals(3, p.defaultPersons(mon.plusDays(6)))   // vrijdag
+        assertEquals(4, state(emptyList()).entryFor(mon).persons)
+    }
+
+    @Test fun weekRunsFromSaturdayToFriday() {
+        assertEquals(mon, Week.startOf(LocalDate.of(2026, 11, 7)))   // zaterdag
+        assertEquals(mon, Week.startOf(LocalDate.of(2026, 11, 13)))  // vrijdag
+        assertEquals(mon.plusDays(7), Week.startOf(LocalDate.of(2026, 11, 14)))
+        assertEquals(java.time.DayOfWeek.FRIDAY, Week.days(mon).last().dayOfWeek)
     }
 
     @Test fun fillsWeekWithoutRepeats() {

@@ -12,7 +12,8 @@ Alle gegevens blijven lokaal op je telefoon (geen account, geen server).
 ## Functies
 
 **Weekmenu**
-- Eén maaltijd per dag, week per week te bekijken (◀ ▶, tik op de titel om naar vandaag te springen).
+- Eén maaltijd per dag. De planningsweek loopt van **zaterdag tot en met vrijdag** (je winkeldag is de eerste dag);
+  blader per week met ◀ ▶, tik op de titel om naar de huidige week te springen.
 - Aantal personen per dag: standaard **3 op weekdagen** en **4 op za/zo**, per dag aan te passen met − / +
   (de standaardwaarden zijn in *Voorkeuren* te wijzigen).
 - Kies een recept uit je verzameling of typ een eigen invoer ("Restaurant", "Restjes", …).
