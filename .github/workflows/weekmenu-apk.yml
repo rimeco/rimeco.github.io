@@ -1,0 +1,55 @@
+name: Weekmenu APK
+
+on:
+  push:
+    branches: [main, "claude/**"]
+    paths: ["weekmenu/**", ".github/workflows/weekmenu-apk.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: weekmenu
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Tests (logica + UI-rooktest)
+        run: ./gradlew --no-daemon testDebugUnitTest
+
+      - name: APK bouwen
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: APK klaarzetten
+        run: cp app/build/outputs/apk/release/app-release.apk Weekmenu.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Weekmenu-apk
+          path: weekmenu/Weekmenu.apk
+
+      # Vaste downloadlink voor op je telefoon:
+      # https://github.com/<owner>/<repo>/releases/download/weekmenu-latest/Weekmenu.apk
+      - name: Publiceren als "weekmenu-latest"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete weekmenu-latest --cleanup-tag --yes || true
+          gh release create weekmenu-latest Weekmenu.apk \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "Weekmenu (laatste build)" \
+            --notes "Automatisch gebouwd uit commit ${GITHUB_SHA::7}. Download Weekmenu.apk op je Android-telefoon en installeer."
