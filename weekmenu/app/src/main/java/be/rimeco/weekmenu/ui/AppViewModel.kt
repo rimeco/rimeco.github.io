@@ -47,10 +47,15 @@ class BulkState {
     var error by mutableStateOf<String?>(null)
     /** Aantal toegevoegde recepten na bevestigen; -1 = nog niet toegevoegd. */
     var added by mutableIntStateOf(-1)
+    /** Ingevuld als een site een login vraagt (adres waarvoor je moet inloggen). */
+    var loginUrl by mutableStateOf<String?>(null)
+    /** Invoer blijft bewaard, ook als je even naar het inlogscherm gaat. */
+    var input by mutableStateOf("")
+    var pagesPerLink by mutableIntStateOf(3)
     val results = androidx.compose.runtime.mutableStateListOf<BulkItem>()
 
     fun reset() {
-        started = false; running = false; page = 0; pages = 0; checked = 0; error = null; added = -1; results.clear()
+        started = false; running = false; page = 0; pages = 0; checked = 0; error = null; added = -1; loginUrl = null; results.clear()
     }
 }
 
@@ -75,6 +80,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     )
 
     init {
+        // Dezelfde browser-identiteit en cookies als de ingebouwde browser, zodat een login-sessie ook voor de import geldt.
+        runCatching { RecipeImporter.userAgent = android.webkit.WebSettings.getDefaultUserAgent(app) }
+        RecipeImporter.cookieJar = WebCookieJar
         val code = _state.value.prefs.householdId
         if (code.isNotBlank()) viewModelScope.launch { sync.resume(code) }
     }
@@ -193,6 +201,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (urls.isEmpty()) { bulk.error = "Plak minstens één link."; return }
         stopBulk()
         bulk.reset()
+        bulk.input = text
+        bulk.pagesPerLink = pagesPerLink
         bulk.started = true
         bulk.running = true
         val st = _state.value
@@ -203,7 +213,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     pagesPerListing = pagesPerLink,
                     knownUrls = st.recipes.map { it.url }.filter { it.isNotBlank() }.toSet(),
                     knownTitles = st.recipes.map { it.title }.toSet(),
-                    onProgress = { p -> bulk.page = p.page; bulk.pages = p.pages; bulk.checked = p.checked; if (bulk.results.isEmpty()) bulk.error = p.lastError },
+                    onProgress = { p -> bulk.page = p.page; bulk.pages = p.pages; bulk.checked = p.checked; bulk.loginUrl = p.loginUrl; if (bulk.results.isEmpty()) bulk.error = p.lastError },
                     onFound = { f -> bulk.results.add(BulkItem(f.url, f.draft)) },
                 )
             } catch (e: CancellationException) {
@@ -214,6 +224,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 bulk.running = false
             }
         }
+    }
+
+    private var bulkAwaitingLogin = false
+
+    fun loginForBulk(url: String) { bulkAwaitingLogin = true; push(Route.SiteLogin(url)) }
+
+    /** Na terugkeren uit het inlogscherm de zoekopdracht automatisch opnieuw starten. */
+    fun resumeBulkAfterLogin() {
+        if (bulkAwaitingLogin) { bulkAwaitingLogin = false; startBulk(bulk.input, bulk.pagesPerLink) }
     }
 
     fun stopBulk() { bulkJob?.cancel(); bulkJob = null; bulk.running = false }

@@ -29,7 +29,11 @@ Alle gegevens blijven lokaal op je telefoon (geen account, geen server).
   (bv. een weekmenu of "alle recepten"), kies hoeveel pagina's er doorlopen worden (`/page/2/` en `?page=2` worden vanzelf herkend),
   en vink aan welke gevonden recepten je wil bewaren. Er worden geen sitespecifieke regels gebruikt: de app volgt de links,
   houdt enkel pagina's met receptgegevens over en slaat menu's en categorieën over. Rustig en beperkt (max. 200 pagina's per keer);
-  recepten die je al hebt worden overgeslagen. Getest met Colruyt-weekmenu, Chicks Love Food en De Hippe Vegetariër.
+  recepten die je al hebt worden overgeslagen. Getest met Colruyt-weekmenu, Chicks Love Food, De Hippe Vegetariër en Leuke Recepten.
+  Staat er een datum in de link (bv. `…/weekmenu/2026-11-09`), dan gaat de app per pagina een week terug in de tijd.
+- **Sites met een account** (bv. Libelle Lekker, waar zelfs de startpagina een login vraagt): de app meldt dat er ingelogd moet worden
+  en opent een ingebouwde browser. Je logt in met je eigen account; de app bewaart je wachtwoord niet, maar gebruikt de sessie-cookies
+  van die browser om de pagina's op te halen en zoekt daarna vanzelf verder.
 - Lukt het inlezen niet (site blokkeert apps of heeft geen receptgegevens)? Dan vul je het recept zelf in.
 - **Beoordeling met 1–5 sterren** (tik nogmaals op dezelfde ster om te wissen).
 - Tags (Vegetarisch, Vlees, Vis, Pasta, Soep, Snel, …) worden uit de ingrediënten geraden en zijn aan te passen.

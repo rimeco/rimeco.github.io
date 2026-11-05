@@ -105,9 +105,29 @@ object Pagination {
         return null
     }
 
+    private val dateInPath = Regex("""(/)(\d{4}-\d{2}-\d{2})(?=/|$|\?)""")
+
+    /**
+     * URL's met een datum in het pad (bv. .../weekmenu/2026-11-09): de opgegeven pagina plus de maandagen daarvoor,
+     * telkens een week eerder ("en eerdere data").
+     */
+    fun datePages(url: String, pages: Int): List<String>? {
+        val m = dateInPath.find(url.substringBefore('?').substringBefore('#')) ?: return null
+        val date = runCatching { java.time.LocalDate.parse(m.groupValues[2]) }.getOrNull() ?: return null
+        var monday = date.minusDays(1).with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+        val out = mutableListOf(url)
+        while (out.size < pages.coerceAtLeast(1)) {
+            val d = monday
+            out += dateInPath.replace(url) { it.groupValues[1] + d }
+            monday = monday.minusWeeks(1)
+        }
+        return out
+    }
+
     /** De pagina-URL's die doorlopen worden: de opgegeven pagina plus de volgende, tot [pages] in totaal. */
     fun pageUrls(firstUrl: String, html: String, pages: Int): List<String> {
         val n = pages.coerceAtLeast(1)
+        datePages(firstUrl, n)?.let { return it }
         fromUrl(firstUrl)?.let { t -> return (0 until n).map { t.url(t.start + it) } }
         val t = fromHtml(html, firstUrl) ?: return listOf(firstUrl)
         return listOf(firstUrl) + (2..n).map { t.url(it) }
@@ -138,6 +158,8 @@ class BulkImporter(
         val checked: Int,
         val found: Int,
         val lastError: String? = null,
+        /** Ingevuld als de site een login vraagt: het adres waarvoor je moet inloggen. */
+        val loginUrl: String? = null,
     )
 
     private fun normTitle(t: String) = t.lowercase().filter { it.isLetterOrDigit() }
@@ -160,10 +182,12 @@ class BulkImporter(
         val groupErrors = ConcurrentHashMap<String, AtomicInteger>()
         val sem = Semaphore(concurrency.coerceAtLeast(1))
         val lastError = java.util.concurrent.atomic.AtomicReference<String?>(null)
+        val loginUrl = java.util.concurrent.atomic.AtomicReference<String?>(null)
+        val visitedPages = HashSet<String>()
         var pageNo = 0
         var totalPages = listingUrls.size * pagesPerListing.coerceAtLeast(1)
 
-        fun progress() = onProgress(Progress(pageNo, totalPages, checked.get(), found.get(), lastError.get()))
+        fun progress() = onProgress(Progress(pageNo, totalPages, checked.get(), found.get(), lastError.get(), loginUrl.get()))
 
         /** Haalt één pagina op en telt het resultaat in de groepsstatistieken. */
         suspend fun check(u: String, ok: AtomicInteger, junk: AtomicInteger, errors: AtomicInteger) {
@@ -176,6 +200,7 @@ class BulkImporter(
                 throw e
             } catch (e: Exception) {
                 lastError.set(e.message)
+                if (e is RecipeImporter.LoginRequiredException) loginUrl.set(e.siteUrl)
                 errors.incrementAndGet()
                 progress()
                 return
@@ -227,20 +252,23 @@ class BulkImporter(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                lastError.set("${listing}: ${e.message}"); progress(); continue
+                if (e is RecipeImporter.LoginRequiredException) loginUrl.set(e.siteUrl)
+                lastError.set(e.message); progress(); continue
             }
             val pages = Pagination.pageUrls(listing, firstHtml, pagesPerListing)
             totalPages += pages.size - pagesPerListing.coerceAtLeast(1)
             for ((i, pageUrl) in pages.withIndex()) {
                 coroutineContext.ensureActive()
                 if (checked.get() >= maxChecks) break
+                if (!visitedPages.add(pageUrl.substringBefore('#'))) continue
                 pageNo++
                 val html = if (i == 0) firstHtml else try {
                     delay(politenessDelayMs); fetch(pageUrl)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    lastError.set("${pageUrl}: ${e.message}"); progress(); break   // waarschijnlijk voorbij de laatste pagina
+                    if (e is RecipeImporter.LoginRequiredException) loginUrl.set(e.siteUrl)
+                lastError.set(e.message); progress(); break   // waarschijnlijk voorbij de laatste pagina
                 }
                 progress()
                 val fresh = LinkHarvester.candidates(html, pageUrl).filter { LinkHarvester.key(it) !in seen }

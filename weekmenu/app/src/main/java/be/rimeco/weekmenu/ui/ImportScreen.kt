@@ -31,14 +31,19 @@ import be.rimeco.weekmenu.data.Recipe
 fun ImportScreen(vm: AppViewModel, url: String) {
     var error by remember { mutableStateOf<String?>(null) }
     var attempt by remember { mutableIntStateOf(0) }
+    var loginUrl by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(url, attempt) {
         error = null
+        loginUrl = null
         try {
             val draft = vm.fetchDraft(url)
             vm.replaceTop(Route.RecipeEdit(draft))
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
+        } catch (e: be.rimeco.weekmenu.logic.RecipeImporter.LoginRequiredException) {
+            loginUrl = e.siteUrl
+            error = "Voor deze site moet je eerst inloggen met je eigen account."
         } catch (e: Exception) {
             error = e.message?.takeIf { it.isNotBlank() } ?: "Onbekende fout"
         }
@@ -58,6 +63,7 @@ fun ImportScreen(vm: AppViewModel, url: String) {
             } else {
                 Text("Ophalen is niet gelukt", style = MaterialTheme.typography.titleMedium)
                 Text(err, color = MaterialTheme.colorScheme.error)
+                loginUrl?.let { login -> Button({ vm.push(Route.SiteLogin(login)) }) { Text("Inloggen") } }
                 Button({ attempt++ }) { Text("Opnieuw proberen") }
                 OutlinedButton({ vm.replaceTop(Route.RecipeEdit(Recipe(id = vm.blankRecipe().id, title = "", url = url, createdAt = System.currentTimeMillis()))) }) {
                     Text("Zelf invullen")

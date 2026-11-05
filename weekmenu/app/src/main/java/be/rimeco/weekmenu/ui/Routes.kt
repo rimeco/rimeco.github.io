@@ -9,4 +9,6 @@ sealed interface Route {
     data class PickMeal(val date: String) : Route
     data class Import(val url: String) : Route
     data object Bulk : Route
+    /** Ingebouwde browser om in te loggen bij een site die een account vraagt. */
+    data class SiteLogin(val url: String) : Route
 }

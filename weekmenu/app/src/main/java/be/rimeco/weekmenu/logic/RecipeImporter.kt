@@ -28,8 +28,26 @@ object RecipeImporter {
     )
 
     private val json = Json { isLenient = true; ignoreUnknownKeys = true }
-    private const val USER_AGENT =
+    private const val DEFAULT_USER_AGENT =
         "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36"
+
+    /** Wordt in de app gelijkgezet met de user-agent van de ingebouwde browser, zodat een login-sessie herkend blijft. */
+    @Volatile var userAgent: String = DEFAULT_USER_AGENT
+
+    /** Cookies van de ingebouwde browser (login-sessies). In tests leeg. */
+    interface CookieJar {
+        fun get(url: String): String?
+        fun set(url: String, setCookieHeaders: List<String>)
+    }
+    @Volatile var cookieJar: CookieJar? = null
+
+    /** De site vraagt een login (we werden doorgestuurd naar een aanmeldpagina). */
+    class LoginRequiredException(val siteUrl: String) : IOException("Voor deze site moet je eerst inloggen.")
+
+    private val loginUrlRe = Regex("""(^|\.)(sso|login|accounts|auth|token|idp)\.|/(login|signin|sign-in|oauth|authorize|aanmelden|inloggen)(/|$|\?)""", RegexOption.IGNORE_CASE)
+
+    /** Is dit het adres van een aanmeldpagina? */
+    fun looksLikeLogin(url: String): Boolean = runCatching { URL(url).let { loginUrlRe.containsMatchIn(it.host + it.path) } }.getOrDefault(false)
 
     /** Zoekt de eerste URL in gedeelde tekst ("Bekijk dit recept https://..."). */
     fun extractUrl(text: String): String? =
@@ -60,22 +78,26 @@ object RecipeImporter {
 
     private fun download(startUrl: String): String {
         var current = URL(startUrl)
-        repeat(6) {
+        repeat(8) {
             val conn = current.openConnection() as HttpURLConnection
             try {
                 conn.instanceFollowRedirects = false
                 conn.connectTimeout = 15_000
                 conn.readTimeout = 20_000
-                conn.setRequestProperty("User-Agent", USER_AGENT)
+                conn.setRequestProperty("User-Agent", userAgent)
+                runCatching { cookieJar?.get(current.toString()) }.getOrNull()?.takeIf { it.isNotBlank() }?.let { conn.setRequestProperty("Cookie", it) }
                 conn.setRequestProperty("Accept", "text/html,application/xhtml+xml")
                 conn.setRequestProperty("Accept-Language", "nl-BE,nl;q=0.9,en;q=0.7")
                 val code = conn.responseCode
+                val setCookies = conn.headerFields.entries.filter { it.key.equals("Set-Cookie", true) }.flatMap { it.value }
+                if (setCookies.isNotEmpty()) runCatching { cookieJar?.set(current.toString(), setCookies) }
                 if (code in 300..399) {
                     val loc = conn.getHeaderField("Location") ?: throw IOException("Doorverwijzing zonder adres")
                     current = URL(current, loc)
                     return@repeat
                 }
                 if (code >= 400) throw IOException("De pagina gaf fout $code")
+                if (looksLikeLogin(current.toString()) && !looksLikeLogin(startUrl)) throw LoginRequiredException(startUrl)
                 val bytes = conn.inputStream.use { it.readNBytesLimited(6_000_000) }
                 return decode(bytes, conn.contentType)
             } finally {

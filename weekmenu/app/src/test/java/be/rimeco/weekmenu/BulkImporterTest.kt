@@ -3,6 +3,7 @@ package be.rimeco.weekmenu
 import be.rimeco.weekmenu.logic.BulkImporter
 import be.rimeco.weekmenu.logic.LinkHarvester
 import be.rimeco.weekmenu.logic.Pagination
+import be.rimeco.weekmenu.logic.RecipeImporter
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -116,5 +117,53 @@ class BulkImporterTest {
             .run(listOf("https://site.be/kapot", "https://site.be/lijst"), 1, emptySet(), emptySet(), maxChecks = 10, onProgress = {}, onFound = { found += it.draft.title })
         assertEquals(10, fetchedRecipes)
         assertEquals(10, found.size)
+    }
+
+    @Test fun datedListingsStepBackOneWeekAtATime() {
+        // Maandag: de maandagen daarvoor
+        assertEquals(
+            listOf(
+                "https://www.libelle-lekker.be/weekmenu/2026-11-09", "https://www.libelle-lekker.be/weekmenu/2026-11-02",
+                "https://www.libelle-lekker.be/weekmenu/2026-10-26", "https://www.libelle-lekker.be/weekmenu/2026-10-19",
+            ),
+            Pagination.pageUrls("https://www.libelle-lekker.be/weekmenu/2026-11-09", "", 4),
+        )
+        // Donderdag 5 nov: de maandag van die week is 2 nov, dan 26 okt, ...
+        assertEquals(
+            listOf("https://www.libelle-lekker.be/weekmenu/2026-11-05", "https://www.libelle-lekker.be/weekmenu/2026-11-02", "https://www.libelle-lekker.be/weekmenu/2026-10-26"),
+            Pagination.pageUrls("https://www.libelle-lekker.be/weekmenu/2026-11-05", "", 3),
+        )
+        assertEquals(listOf("https://x.be/weekmenu/2026-11-09/"), Pagination.pageUrls("https://x.be/weekmenu/2026-11-09/", "", 1))
+        // datum buiten het pad (bv. een artikelnummer) wordt niet aangezien voor een datum
+        assertEquals(listOf("https://x.be/artikelen/184495/soep"), Pagination.pageUrls("https://x.be/artikelen/184495/soep", "", 3))
+    }
+
+    @Test fun overlappingDatedListingsAreFetchedOnce() = runBlocking {
+        val listingFetches = mutableListOf<String>()
+        BulkImporter(fetch = { u -> if (u.contains("/weekmenu/")) listingFetches += u; "<html></html>" }, politenessDelayMs = 0)
+            .run(
+                listOf("https://s.be/weekmenu/2026-11-16", "https://s.be/weekmenu/2026-11-09"), 3,
+                emptySet(), emptySet(), onProgress = {}, onFound = {},
+            )
+        // 16 nov + 9 nov + 2 nov, daarna 9 nov (al gedaan), 2 nov (al gedaan), 26 okt
+        assertEquals(
+            listOf("2026-11-16", "2026-11-09", "2026-11-02", "2026-10-26").map { "https://s.be/weekmenu/$it" }.sorted(),
+            listingFetches.distinct().sorted(),
+        )
+    }
+
+    @Test fun loginWallsAreRecognisedAndReported() {
+        assertTrue(RecipeImporter.looksLikeLogin("https://sso.roularta.be/login"))
+        assertTrue(RecipeImporter.looksLikeLogin("https://token.roularta.be/oauth/v1/authorize?client_id=1"))
+        assertTrue(RecipeImporter.looksLikeLogin("https://site.be/inloggen"))
+        assertFalse(RecipeImporter.looksLikeLogin("https://www.libelle-lekker.be/weekmenu/2026-11-09"))
+        assertFalse(RecipeImporter.looksLikeLogin("https://site.be/recept/inloggen-bij-de-bakker"))
+    }
+
+    @Test fun loginRequirementIsPassedOnToTheScreen() = runBlocking {
+        var last: BulkImporter.Progress? = null
+        BulkImporter(fetch = { throw RecipeImporter.LoginRequiredException("https://www.libelle-lekker.be/weekmenu/2026-11-09") }, politenessDelayMs = 0)
+            .run(listOf("https://www.libelle-lekker.be/weekmenu/2026-11-09"), 1, emptySet(), emptySet(), onProgress = { last = it }, onFound = {})
+        assertEquals("https://www.libelle-lekker.be/weekmenu/2026-11-09", last?.loginUrl)
     }
 }
