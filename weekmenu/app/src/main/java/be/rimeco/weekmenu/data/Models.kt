@@ -52,6 +52,8 @@ data class ShoppingItem(
     /** Bv. de receptnamen waar dit item voor nodig is. */
     val note: String = "",
     val addedAt: Long = 0L,
+    /** Hoeveelheid handmatig aangepast: dan tonen we precies wat je typte (zonder afronden). */
+    val manual: Boolean = false,
 )
 
 /** Eerder afgevinkt/gekocht item, bewaard om snel opnieuw toe te voegen. */

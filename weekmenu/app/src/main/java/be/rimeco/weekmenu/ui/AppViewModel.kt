@@ -36,6 +36,8 @@ import java.io.File
 import java.time.LocalDate
 import java.util.UUID
 
+data class ShoppingSnapshot(val shopping: List<be.rimeco.weekmenu.data.ShoppingItem>, val history: List<HistoryItem>)
+
 data class BulkItem(val url: String, val draft: RecipeImporter.Draft, val selected: Boolean = true)
 
 /** Toestand van het scherm "Recepten in bulk toevoegen" (blijft behouden bij draaien van het scherm). */
@@ -301,6 +303,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun forgetHistory(name: String) = update { s -> s.copy(history = s.history.filter { it.name != name }) }
 
     /** Geeft het aantal maaltijden terug waarvan de ingrediënten toegevoegd werden. */
+    /** Bewaart de lijst + historiek vóór een wijziging, zodat die "ongedaan gemaakt" kan worden. */
+    fun shoppingSnapshot() = _state.value.let { ShoppingSnapshot(it.shopping, it.history) }
+    fun restoreShopping(s: ShoppingSnapshot) = update { it.copy(shopping = s.shopping, history = s.history) }
+
+    /** Past naam/hoeveelheid/eenheid van een item aan (lang indrukken op het item). */
+    fun updateItem(id: String, name: String, quantity: Double?, unit: String) = update { s ->
+        s.copy(shopping = s.shopping.map {
+            if (it.id != id) it else it.copy(
+                name = name.trim().lowercase().ifBlank { it.name },
+                quantity = quantity,
+                unit = if (quantity == null) "" else unit,
+                manual = true,
+            )
+        })
+    }
+
     fun addWeekToList(dates: List<LocalDate>): Int {
         var added = 0
         update { s ->

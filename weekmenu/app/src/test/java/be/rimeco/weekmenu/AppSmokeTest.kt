@@ -3,6 +3,10 @@ package be.rimeco.weekmenu
 import android.app.Application
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -16,6 +20,7 @@ import be.rimeco.weekmenu.ui.WeekmenuApp
 import be.rimeco.weekmenu.ui.WeekmenuTheme
 import be.rimeco.weekmenu.ui.dayShort
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -62,8 +67,7 @@ class AppSmokeTest {
 
         // Boodschappen-tab: item toevoegen, afvinken
         rule.onNodeWithText("Boodschappen").performClick()
-        rule.onNodeWithText("Item toevoegen (bv. 2 kg appels)").performTextInput("2 kg appels")
-        rule.onNodeWithText("Item toevoegen (bv. 2 kg appels)").let { /* bevestigen via VM */ }
+        vm.addManual("2 kg appels")
         vm.addManual("Pickles")
         rule.waitForIdle()
         rule.onNodeWithText("Pickles").performClick()
@@ -158,5 +162,83 @@ class AppSmokeTest {
         rule.onNodeWithText("Zet op boodschappenlijst").assertExists()
         rule.onNodeWithText("2 pers.").assertExists()          // het aantal personen van die dag, niet de 4 van het recept
         rule.onNodeWithText("200 g").assertExists()            // 400 g × 2/4
+    }
+
+    private fun vmWithList(vararg names: String): AppViewModel {
+        val vm = AppViewModel(ApplicationProvider.getApplicationContext<Application>())
+        names.forEach { vm.addManual(it) }
+        return vm
+    }
+
+    @Test fun previouslyBoughtItemsCanBeAddedBackFromTheSheet() {
+        val vm = vmWithList("Melk", "Brood")
+        vm.state.value.shopping.forEach { vm.toggleItem(it.id) }
+        vm.clearChecked()
+        assertTrue(vm.state.value.shopping.isEmpty()); assertEquals(2, vm.state.value.history.size)
+        rule.setContent { WeekmenuTheme { WeekmenuApp(vm) } }
+        rule.onNodeWithText("Boodschappen").performClick()
+        rule.onNodeWithText("Alle eerder gekochte…").performClick()
+        rule.waitForIdle()
+        // Semantische klik: een aanraking bereikt in Robolectric het aparte venster van het bottom sheet niet.
+        rule.onAllNodesWithText("1× gekocht")[0].performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick) { it() }
+        rule.waitForIdle()
+        assertEquals(1, vm.state.value.shopping.count { !it.checked })
+        // het item dat nu op de lijst staat, meldt dat in het venster in plaats van enkel een vinkje
+        rule.onNodeWithText("Staat al op de lijst").assertExists()
+    }
+
+    @Test fun tappingAnItemCanBeUndone() {
+        val vm = vmWithList("Melk")
+        rule.setContent { WeekmenuTheme { WeekmenuApp(vm) } }
+        rule.onNodeWithText("Boodschappen").performClick()
+        rule.onNodeWithText("Melk").performClick()                       // per ongeluk afgevinkt
+        rule.waitForIdle()
+        assertTrue(vm.state.value.shopping[0].checked)
+        assertEquals(1, vm.state.value.history.size)
+        rule.onNodeWithText("‘Melk’ afgevinkt").assertExists()
+        rule.onNodeWithText("Ongedaan maken").performClick()
+        rule.waitForIdle()
+        assertFalse(vm.state.value.shopping[0].checked)
+        assertTrue("historiek ook teruggedraaid", vm.state.value.history.isEmpty())
+    }
+
+    @Test fun deletedItemsAndClearingTheListCanBeUndone() {
+        val vm = vmWithList("Melk", "Brood")
+        rule.setContent { WeekmenuTheme { WeekmenuApp(vm) } }
+        rule.onNodeWithText("Boodschappen").performClick()
+        rule.onAllNodesWithContentDescription("Verwijderen")[0].performClick()
+        rule.waitForIdle()
+        assertEquals(1, vm.state.value.shopping.size)
+        rule.onNodeWithText("Ongedaan maken").performClick()
+        rule.waitForIdle()
+        assertEquals(2, vm.state.value.shopping.size)
+    }
+
+    // De bewerkdialoog zelf wordt niet als UI-test gedraaid: een AlertDialog met tekstveld blijft in Robolectric eindeloos
+    // "bezig" (ook zonder onze code). Daarom testen we de wijziging en de weergave los van de dialoog.
+    @Test fun editedQuantityIsStoredAndShownExactly() {
+        val vm = vmWithList("Melk")
+        val id = vm.state.value.shopping[0].id
+        vm.updateItem(id, "Halfvolle melk", 1.5, "l")
+        val item = vm.state.value.shopping[0]
+        assertEquals("halfvolle melk", item.name); assertEquals(1.5, item.quantity!!, 0.001); assertEquals("l", item.unit); assertTrue(item.manual)
+        rule.setContent { WeekmenuTheme { WeekmenuApp(vm) } }
+        rule.onNodeWithText("Boodschappen").performClick()
+        rule.onNodeWithText("1,5 l  Halfvolle melk", substring = true).assertExists()   // niet afgerond naar "2"
+        vm.updateItem(id, "Halfvolle melk", null, "l")
+        assertEquals(null, vm.state.value.shopping[0].quantity); assertEquals("", vm.state.value.shopping[0].unit)
+    }
+
+    @Test fun autocompleteOffersHistoryAndRecipeIngredientsWhileTyping() {
+        val vm = vmWithList()
+        vm.upsertRecipe(Recipe("a", "Pasta", ingredients = listOf(IngredientParser.parse("3 teentjes knoflook"))))
+        rule.setContent { WeekmenuTheme { WeekmenuApp(vm) } }
+        rule.onNodeWithText("Boodschappen").performClick()
+        rule.onNodeWithText("Item toevoegen (bv. 2 kg appels)").performTextInput("kno")
+        rule.waitForIdle()
+        rule.onNodeWithText("uit je recepten").assertExists()
+        rule.onNodeWithText("Knoflook").performClick()
+        rule.waitForIdle()
+        assertEquals(listOf("knoflook"), vm.state.value.shopping.map { it.name })
     }
 }

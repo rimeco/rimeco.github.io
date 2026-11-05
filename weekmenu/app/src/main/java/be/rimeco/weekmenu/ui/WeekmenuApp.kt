@@ -59,7 +59,7 @@ fun WeekmenuApp(vm: AppViewModel) {
                 when (tab) {
                     0 -> MenuScreen(vm, state, snackbar)
                     1 -> RecipesScreen(vm, state)
-                    2 -> ShoppingScreen(vm, state)
+                    2 -> ShoppingScreen(vm, state, snackbar)
                     else -> PrefsScreen(vm, state)
                 }
             }

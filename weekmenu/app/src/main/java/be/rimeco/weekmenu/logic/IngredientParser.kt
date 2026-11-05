@@ -49,6 +49,12 @@ object IngredientParser {
         "snuf", "snufje", "beetje", "wat", "een", "flinke", "mespunt",
     )
 
+    /** "gram" -> "g", "EL" -> "el"; onbekende eenheden blijven (kleine letters) behouden. */
+    fun normalizeUnit(text: String): String {
+        val t = text.trim().trimEnd('.').lowercase()
+        return units[t] ?: t
+    }
+
     fun parseNumber(s: String): Double? {
         val t = s.trim()
         if (t.isEmpty()) return null

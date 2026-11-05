@@ -21,6 +21,29 @@ object ShoppingBuilder {
 
     private fun newId() = UUID.randomUUID().toString()
 
+    // ---------- notities (receptnamen bij een item) ----------
+    const val NOTE_SEP = " · "
+
+    fun splitNote(note: String): List<String> =
+        if (note.contains(NOTE_SEP)) note.split(NOTE_SEP).filter { it.isNotBlank() } else listOfNotNull(note.takeIf { it.isNotBlank() })
+
+    fun joinNote(titles: Collection<String>): String = titles.joinToString(NOTE_SEP)
+
+    /** Korte versie voor in de lijst: hoogstens [maxTitles] receptnamen, elk ingekort, plus "+N" voor de rest. */
+    fun shortNote(note: String, maxTitles: Int = 2, maxChars: Int = 22): String {
+        val titles = splitNote(note)
+        if (titles.isEmpty()) return ""
+        fun cut(t: String): String {
+            if (t.length <= maxChars) return t
+            val head = t.take(maxChars - 1)
+            val space = head.lastIndexOf(' ')
+            // liefst op een woordgrens afkappen ("Gevulde paprika met…" i.p.v. "Gevulde paprika met c…")
+            return (if (space >= 8) head.take(space) else head).trimEnd(' ', ',', '-') + "…"
+        }
+        val shown = titles.take(maxTitles).joinToString(NOTE_SEP) { cut(it) }
+        return if (titles.size > maxTitles) "$shown +${titles.size - maxTitles}" else shown
+    }
+
     private fun scaledLines(recipe: Recipe, persons: Int, skipStaples: Boolean): List<Line> {
         val factor = persons.toDouble() / recipe.servings.coerceAtLeast(1)
         return recipe.ingredients
@@ -71,7 +94,7 @@ object ShoppingBuilder {
         val items = existing.toMutableList()
         for (l in lines) {
             val idx = items.indexOfFirst { !it.checked && it.name.lowercase() == l.name && Units.dimOf(it.unit).key == l.dimKey }
-            val note = l.notes.joinToString(", ")
+            val note = joinNote(l.notes)
             if (idx >= 0) {
                 val ex = items[idx]
                 val exBase = ex.quantity?.let { Units.toBase(it, ex.unit) }
@@ -84,7 +107,8 @@ object ShoppingBuilder {
                 items[idx] = ex.copy(
                     quantity = pretty?.first?.let { Units.clean(it) },
                     unit = pretty?.second ?: ex.unit,
-                    note = listOf(ex.note, note).filter { it.isNotBlank() }.flatMap { it.split(", ") }.distinct().joinToString(", "),
+                    note = joinNote((splitNote(ex.note) + l.notes).distinct()),
+                    manual = false,
                 )
             } else {
                 val pretty = l.quantity?.let { Units.pretty(it, l.baseUnit) }
@@ -116,6 +140,42 @@ object ShoppingBuilder {
         val base = item.quantity?.let { Units.toBase(it, item.unit) }
         val line = Line(item.name.lowercase(), Units.dimOf(item.unit).key, base?.first, base?.second ?: Units.dimOf(item.unit).baseUnit, linkedSetOf())
         return state.copy(shopping = mergeInto(state.shopping, listOf(line), now, idGen))
+    }
+
+    // ---------- aanvullen tijdens het typen ----------
+    data class Suggestion(val name: String, val history: HistoryItem?, val label: String)
+
+    /**
+     * Suggesties tijdens het typen: eerder gekochte items én ingrediënten uit je recepten, beginnend-met eerst.
+     * Items die al op de (niet-afgevinkte) lijst staan worden weggelaten. Een getypte hoeveelheid ("2 kg kno") telt niet mee.
+     */
+    fun autocomplete(state: AppState, text: String, limit: Int = 6): List<Suggestion> {
+        val typed = IngredientParser.parse(text)
+        val q = (if (typed.quantity != null) typed.name else text.trim().lowercase()).trim()
+        if (q.length < 2) return emptyList()
+        val onList = state.shopping.filter { !it.checked }.map { it.name.lowercase() }.toSet()
+        val history = state.history.associateBy { it.name }
+        val recipeCounts = HashMap<String, Int>()
+        state.recipes.forEach { r -> r.ingredients.map { it.name.lowercase() }.filter { it.isNotBlank() }.distinct().forEach { recipeCounts.merge(it, 1, Int::plus) } }
+        fun score(name: String) = when {
+            name.startsWith(q) -> 3
+            name.split(' ', '-').any { it.startsWith(q) } -> 2
+            name.contains(q) -> 1
+            else -> 0
+        }
+        return (history.keys + recipeCounts.keys).distinct()
+            .filter { it !in onList && score(it) > 0 && !IngredientParser.isStaple(it) }
+            .sortedWith(
+                compareByDescending<String> { score(it) }
+                    .thenByDescending { it in history }
+                    .thenByDescending { (history[it]?.count ?: 0) + (recipeCounts[it] ?: 0) }
+                    .thenBy { it.length },
+            )
+            .take(limit)
+            .map { n ->
+                val h = history[n]
+                Suggestion(n, h, if (h != null) "eerder gekocht (${h.count}×)" else "uit je recepten")
+            }
     }
 
     fun toggle(state: AppState, id: String, now: Long): AppState {

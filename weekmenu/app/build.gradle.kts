@@ -51,6 +51,7 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
         unitTests.all {
+            it.maxHeapSize = "2g"   // veel Robolectric-UI-tests in één JVM
             // Robolectric-jar kan ook lokaal staan (offline): -Probolectric.dir=/pad/naar/map
             val dir = (project.findProperty("robolectric.dir") as String?)
             if (dir != null) {

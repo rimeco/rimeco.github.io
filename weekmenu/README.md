@@ -50,7 +50,11 @@ Alle gegevens blijven lokaal op je telefoon (geen account, geen server).
   personen per dag** en samengevoegd (2 × ui → één regel, 800 g + 1 kg → 1,8 kg).
   Dezelfde maaltijd wordt nooit dubbel toegevoegd. Zout, peper en water worden overgeslagen (instelbaar).
 - Afrondingen die je kan gebruiken: blikken/stuks naar boven, grammen op 5, lepels als ¼ ½ ¾.
-- **Handmatig toevoegen**, ook met hoeveelheid: `2 kg appels`.
+- **Handmatig toevoegen**, ook met hoeveelheid: `2 kg appels`. Tijdens het typen verschijnt een aanvulmenu met eerder gekochte items én
+  ingrediënten uit je recepten (items die al op de lijst staan worden weggelaten).
+- **Ongedaan maken**: na afvinken, terugzetten, verwijderen, opruimen of aanpassen staat onderaan een melding met *Ongedaan maken*.
+- **Lang indrukken** op een item om naam, hoeveelheid en eenheid zelf aan te passen (wordt dan precies zo getoond, zonder afronden).
+- Hoeveelheid en naam staan vet; de receptnamen bij een item zijn ingekort tot één regel ("Gevulde paprika met… · Lasagne… +2").
 - **Afgevinkte items worden onthouden**: tik een suggestie aan, of open *Alle eerder gekochte…*
   (doorzoekbaar, meest gekocht eerst) om iets met één tik terug op de lijst te zetten.
   *Lijst opruimen* wist de afgevinkte items van de lijst, maar ze blijven in je historiek.
