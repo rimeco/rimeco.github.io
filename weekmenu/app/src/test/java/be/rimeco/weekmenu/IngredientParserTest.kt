@@ -45,6 +45,20 @@ class IngredientParserTest {
         assertEquals(3.0, p("2-3 uien").quantity!!, 0.001)
     }
 
+    @Test fun zeroQuantityMeansUnknownAndKeepsTheName() {
+        val i = p("0 olijfolie")
+        assertNull(i.quantity); assertEquals("olijfolie", i.name)
+        assertEquals("peper en zout", p("0 peper en zout").name)
+        assertTrue(IngredientParser.isStaple(p("0 peper en zout").name))
+    }
+
+    @Test fun libelleStyleLinesWithoutSpaces() {
+        val a = p("1handje verse oregano"); assertEquals(1.0, a.quantity!!, 0.001); assertEquals("handvol", a.unit); assertEquals("verse oregano", a.name)
+        val b = p("1kl bakpoeder"); assertEquals("kl", b.unit); assertEquals("bakpoeder", b.name)
+        val c = p("300g kipfilet"); assertEquals("g", c.unit); assertEquals("kipfilet", c.name)
+        val d = p("1l kippenbouillon"); assertEquals("l", d.unit)
+    }
+
     @Test fun noQuantity() {
         val i = p("Zout en peper")
         assertNull(i.quantity); assertEquals("zout en peper", i.name)

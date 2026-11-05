@@ -166,4 +166,23 @@ class BulkImporterTest {
             .run(listOf("https://www.libelle-lekker.be/weekmenu/2026-11-09"), 1, emptySet(), emptySet(), onProgress = { last = it }, onFound = {})
         assertEquals("https://www.libelle-lekker.be/weekmenu/2026-11-09", last?.loginUrl)
     }
+
+    @Test fun groupsLinksWithNumericIdsTogether() {
+        assertEquals("/bekijk-recept/#", LinkHarvester.groupOf("https://s.be/bekijk-recept/90009/kippensoep-met-mais"))
+        assertEquals("/bekijk-recept/#", LinkHarvester.groupOf("https://s.be/bekijk-recept/92938/wortelsoep"))
+        assertEquals("/bekijk-recept/#", LinkHarvester.groupOf("https://s.be/bekijk-recept/92938"))
+        assertEquals("/recept", LinkHarvester.groupOf("https://chicks.com/recept/miso-egg-toast"))
+        assertEquals("/nl/recepten", LinkHarvester.groupOf("https://colruyt.be/nl/recepten/herfstsoep"))
+        assertEquals("/#", LinkHarvester.groupOf("https://blog.be/2024/05/pompoensoep"))
+    }
+
+    @Test fun libelleStyleWeekmenuIsImportedEvenThoughEveryRecipeHasItsOwnId() = runBlocking {
+        val pages = mutableMapOf("https://s.be/weekmenu/2026-11-09" to links("/zoeken", "/profiel", "/weekmenu/2026-11-16", *(1..8).map { "/bekijk-recept/${90000 + it}/recept-$it" }.toTypedArray()))
+        (1..8).forEach { pages["https://s.be/bekijk-recept/${90000 + it}/recept-$it"] = recipePage("Recept $it", "1 ei") }
+        pages["https://s.be/zoeken"] = "<html>zoek</html>"; pages["https://s.be/profiel"] = "<html>profiel</html>"
+        val found = mutableListOf<String>()
+        BulkImporter(fetch = { pages[it] ?: throw IOException("404") }, politenessDelayMs = 0)
+            .run(listOf("https://s.be/weekmenu/2026-11-09"), 1, emptySet(), emptySet(), onProgress = {}, onFound = { found += it.draft.title })
+        assertEquals(8, found.size)
+    }
 }

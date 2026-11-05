@@ -79,15 +79,16 @@ object IngredientParser {
         if (qm != null) {
             val lower = parseNumber(qm.groupValues[1])
             val upper = qm.groupValues[2].takeIf { it.isNotEmpty() }?.let { parseNumber(it) }
-            quantity = upper?.takeIf { lower == null || it >= lower } ?: lower
+            val q = upper?.takeIf { lower == null || it >= lower } ?: lower
             rest = qm.groupValues[3]
-            if (quantity != null) {
+            if (q != null) {
                 val um = unitTokenRegex.find(rest)
                 val canon = um?.let { units[it.groupValues[1].lowercase()] }
                 if (um != null && canon != null) {
                     unit = canon
                     rest = um.groupValues[2]
                 }
+                if (q > 0) quantity = q else unit = ""   // "0 olijfolie": hoeveelheid onbekend, maar het getal hoort niet bij de naam
             } else {
                 rest = s
             }

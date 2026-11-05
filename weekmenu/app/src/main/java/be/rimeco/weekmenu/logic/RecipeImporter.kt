@@ -78,7 +78,7 @@ object RecipeImporter {
 
     private fun download(startUrl: String): String {
         var current = URL(startUrl)
-        repeat(8) {
+        repeat(12) {
             val conn = current.openConnection() as HttpURLConnection
             try {
                 conn.instanceFollowRedirects = false

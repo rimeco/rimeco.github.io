@@ -28,9 +28,15 @@ object LinkHarvester {
         (u.host ?: "").lowercase().removePrefix("www.") + (u.path ?: "").trimEnd('/')
     }.getOrDefault(url)
 
-    /** Pad zonder laatste segment: "/recept/soep" -> "/recept". Wordt gebruikt om links te groeperen. */
-    fun parentOf(url: String): String = runCatching {
-        URI(url).path.trimEnd('/').substringBeforeLast('/', "")
+    /**
+     * Groepeert links die bij elkaar horen: het pad zonder laatste segment ("/recept/soep" -> "/recept").
+     * Segmenten die enkel uit cijfers bestaan (id's, jaartallen) tellen als "#", en alles erna wordt genegeerd:
+     * "/bekijk-recept/90009/kippensoep" en "/bekijk-recept/92938/wortelsoep" vormen samen de groep "/bekijk-recept/#".
+     */
+    fun groupOf(url: String): String = runCatching {
+        val segs = URI(url).path.split('/').filter { it.isNotEmpty() }.map { if (it.all { c -> c.isDigit() }) "#" else it }
+        val firstId = segs.indexOf("#")
+        "/" + (if (firstId >= 0) segs.take(firstId + 1) else segs.dropLast(1)).joinToString("/")
     }.getOrDefault("")
 
     /** Alle interne links (zelfde site) die geen bijlage, paginering of de pagina zelf zijn; zonder query en fragment. */
@@ -272,7 +278,7 @@ class BulkImporter(
                 }
                 progress()
                 val fresh = LinkHarvester.candidates(html, pageUrl).filter { LinkHarvester.key(it) !in seen }
-                var groups = fresh.groupBy { LinkHarvester.parentOf(it) }
+                var groups = fresh.groupBy { LinkHarvester.groupOf(it) }
                 // Een lijst met recepten heeft meerdere recepten onder hetzelfde pad; losse links (menu, contact) slaan we dan over.
                 if (groups.any { it.value.size >= 3 }) groups = groups.filter { it.value.size >= 3 }
                 groups.values.forEach { g -> g.forEach { seen += LinkHarvester.key(it) } }
