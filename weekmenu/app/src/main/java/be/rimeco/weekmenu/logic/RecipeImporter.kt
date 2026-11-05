@@ -140,6 +140,7 @@ object RecipeImporter {
         val title = Text.clean(recipe["name"].firstString() ?: "")
         val ingredients = (recipe["recipeIngredient"] ?: recipe["ingredients"]).allStrings()
             .map { Text.clean(it) }.filter { it.isNotBlank() }
+            .ifEmpty { reactIngredients(html) }
         val servings = recipe["recipeYield"].allStrings()
             .firstNotNullOfOrNull { Regex("\\d+").find(it)?.value?.toIntOrNull() }
             ?.coerceIn(1, 99) ?: 4
@@ -157,6 +158,31 @@ object RecipeImporter {
             tags = Tags.suggest(title, names, category, minutes),
             foundRecipeData = true,
         )
+    }
+
+    /**
+     * Vangnet voor sites die hun ingrediënten pas in de browser tekenen (bv. Libelle Lekker): de gegevens staan als JSON in
+     * `<div id="react-recipe-ingredients" data-ingredient-groups="[…]">`. Wordt enkel gebruikt als de schema.org-data geen ingrediënten bevat.
+     */
+    internal fun reactIngredients(html: String): List<String> {
+        val tag = Regex("""<[^>]*id=["']react-recipe-ingredients["'][^>]*>""").find(html)?.value ?: return emptyList()
+        val attr = Regex("""data-ingredient-groups=["']([^"']*)["']""").find(tag)?.groupValues?.get(1) ?: return emptyList()
+        val groups = runCatching { json.parseToJsonElement(Text.unescapeHtml(attr)) as? JsonArray }.getOrNull() ?: return emptyList()
+        val lines = mutableListOf<String>()
+        for (g in groups) {
+            val items = ((g as? JsonObject)?.get("ingredients") as? JsonArray) ?: continue
+            for (it in items) {
+                val o = it as? JsonObject ?: continue
+                val ing = o["ingredient"] as? JsonObject
+                val plural = (o["plural"] as? JsonPrimitive)?.content == "1"
+                val name = (if (plural) ing?.get("nameDisplayPlural").firstString()?.takeIf { n -> n.isNotBlank() } else null)
+                    ?: ing?.get("nameDisplay").firstString() ?: ing?.get("nameSelect").firstString() ?: continue
+                val qty = (o["quantity"] as? JsonPrimitive)?.content?.toDoubleOrNull()?.takeIf { q -> q > 0 }?.let { q -> Units.formatNumber(q, fractions = false) }
+                val unit = ((o["unit"] as? JsonObject)?.get("name")).firstString()
+                lines += listOfNotNull(qty, unit?.takeIf { u -> u.isNotBlank() }, name).joinToString(" ")
+            }
+        }
+        return lines
     }
 
     private fun findRecipeNodes(html: String): List<JsonObject> {

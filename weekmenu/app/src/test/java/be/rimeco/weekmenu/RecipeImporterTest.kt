@@ -82,4 +82,24 @@ class RecipeImporterTest {
         val tags = Tags.suggest("Risotto", listOf("champignons", "rijst", "kippenbouillon"))
         assertTrue(Tags.VEGETARIAN in tags); assertFalse(Tags.MEAT in tags)
     }
+
+    @Test fun fallsBackToIngredientsRenderedByTheSitesOwnScript() {
+        // Zoals Libelle Lekker: schema.org-recept zonder ingrediënten; die staan als JSON in het React-mountpunt.
+        val html = """
+            <script type="application/ld+json">{"@type":"Recipe","name":"Kippensoep","recipeYield":"4"}</script>
+            <div id="react-recipe-ingredients" data-affiliate="" data-ingredient-groups="[{&quot;title&quot;:&quot;&quot;,&quot;ingredients&quot;:[
+              {&quot;quantity&quot;:&quot;300.00&quot;,&quot;plural&quot;:0,&quot;unit&quot;:{&quot;name&quot;:&quot;g&quot;},&quot;ingredient&quot;:{&quot;nameDisplay&quot;:&quot;kipfilet&quot;,&quot;nameDisplayPlural&quot;:&quot;kipfilets&quot;}},
+              {&quot;quantity&quot;:&quot;4.00&quot;,&quot;plural&quot;:1,&quot;unit&quot;:{&quot;name&quot;:&quot;&quot;},&quot;ingredient&quot;:{&quot;nameDisplay&quot;:&quot;lente-ui&quot;,&quot;nameDisplayPlural&quot;:&quot;lente-uitjes&quot;}},
+              {&quot;quantity&quot;:&quot;0.00&quot;,&quot;plural&quot;:0,&quot;unit&quot;:null,&quot;ingredient&quot;:{&quot;nameDisplay&quot;:&quot;zout&quot;}},
+              {&quot;quantity&quot;:&quot;1.50&quot;,&quot;plural&quot;:0,&quot;unit&quot;:{&quot;name&quot;:&quot;l&quot;},&quot;ingredient&quot;:{&quot;nameDisplay&quot;:&quot;bouillon&quot;}}]}]"></div>
+        """.trimIndent().replace("\n", " ")
+        val d = RecipeImporter.parse(html)
+        assertEquals(listOf("300 g kipfilet", "4 lente-uitjes", "zout", "1,5 l bouillon"), d.ingredientLines)
+    }
+
+    @Test fun schemaOrgIngredientsWinOverTheFallback() {
+        val html = """<script type="application/ld+json">{"@type":"Recipe","name":"X","ingredients":["1 ei"]}</script>
+            <div id="react-recipe-ingredients" data-ingredient-groups="[{&quot;ingredients&quot;:[{&quot;quantity&quot;:&quot;9.00&quot;,&quot;ingredient&quot;:{&quot;nameDisplay&quot;:&quot;ander&quot;}}]}]"></div>"""
+        assertEquals(listOf("1 ei"), RecipeImporter.parse(html).ingredientLines)
+    }
 }
