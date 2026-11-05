@@ -8,4 +8,5 @@ sealed interface Route {
     data class RecipeEdit(val initial: Recipe) : Route
     data class PickMeal(val date: String) : Route
     data class Import(val url: String) : Route
+    data object Bulk : Route
 }

@@ -25,6 +25,11 @@ Alle gegevens blijven lokaal op je telefoon (geen account, geen server).
   gebruik **Delen → Weekmenu** vanuit je browser. Titel, foto, aantal personen, bereidingstijd en ingrediënten
   worden ingelezen uit de schema.org/Recipe-gegevens die vrijwel alle receptensites bevatten.
   Je controleert het resultaat nog voor je het bewaart.
+- **Meerdere recepten tegelijk**: *Recepten → Recept → Meerdere recepten tegelijk…*. Plak één of meer links naar overzichtspagina's
+  (bv. een weekmenu of "alle recepten"), kies hoeveel pagina's er doorlopen worden (`/page/2/` en `?page=2` worden vanzelf herkend),
+  en vink aan welke gevonden recepten je wil bewaren. Er worden geen sitespecifieke regels gebruikt: de app volgt de links,
+  houdt enkel pagina's met receptgegevens over en slaat menu's en categorieën over. Rustig en beperkt (max. 200 pagina's per keer);
+  recepten die je al hebt worden overgeslagen. Getest met Colruyt-weekmenu, Chicks Love Food en De Hippe Vegetariër.
 - Lukt het inlezen niet (site blokkeert apps of heeft geen receptgegevens)? Dan vul je het recept zelf in.
 - **Beoordeling met 1–5 sterren** (tik nogmaals op dezelfde ster om te wissen).
 - Tags (Vegetarisch, Vlees, Vis, Pasta, Soep, Snel, …) worden uit de ingrediënten geraden en zijn aan te passen.

@@ -11,7 +11,14 @@ import be.rimeco.weekmenu.data.Prefs
 import be.rimeco.weekmenu.data.Recipe
 import be.rimeco.weekmenu.data.defaultPersons
 import be.rimeco.weekmenu.data.entryFor
+import be.rimeco.weekmenu.logic.BulkImporter
 import be.rimeco.weekmenu.logic.IngredientParser
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import be.rimeco.weekmenu.logic.MenuPlanner
 import be.rimeco.weekmenu.logic.RecipeImporter
 import be.rimeco.weekmenu.logic.ShoppingBuilder
@@ -27,6 +34,25 @@ import kotlinx.coroutines.flow.update
 import java.io.File
 import java.time.LocalDate
 import java.util.UUID
+
+data class BulkItem(val url: String, val draft: RecipeImporter.Draft, val selected: Boolean = true)
+
+/** Toestand van het scherm "Recepten in bulk toevoegen" (blijft behouden bij draaien van het scherm). */
+class BulkState {
+    var started by mutableStateOf(false)
+    var running by mutableStateOf(false)
+    var page by mutableIntStateOf(0)
+    var pages by mutableIntStateOf(0)
+    var checked by mutableIntStateOf(0)
+    var error by mutableStateOf<String?>(null)
+    /** Aantal toegevoegde recepten na bevestigen; -1 = nog niet toegevoegd. */
+    var added by mutableIntStateOf(-1)
+    val results = androidx.compose.runtime.mutableStateListOf<BulkItem>()
+
+    fun reset() {
+        started = false; running = false; page = 0; pages = 0; checked = 0; error = null; added = -1; results.clear()
+    }
+}
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val store = Persistence(File(app.filesDir, "weekmenu.json"))
@@ -141,17 +167,73 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---------- recepten ----------
     suspend fun fetchDraft(url: String): Recipe {
         val d = RecipeImporter.fetchDraft(url)
-        return Recipe(
-            id = UUID.randomUUID().toString(),
-            title = d.title,
-            url = RecipeImporter.normalizeUrl(url),
-            imageUrl = d.imageUrl,
-            servings = d.servings,
-            minutes = d.minutes,
-            ingredients = d.ingredientLines.map { IngredientParser.parse(it) },
-            tags = d.tags,
-            createdAt = now(),
-        )
+        return recipeFromDraft(d, RecipeImporter.normalizeUrl(url), now())
+    }
+
+    private fun recipeFromDraft(d: RecipeImporter.Draft, url: String, createdAt: Long) = Recipe(
+        id = UUID.randomUUID().toString(),
+        title = d.title,
+        url = url,
+        imageUrl = d.imageUrl,
+        servings = d.servings,
+        minutes = d.minutes,
+        ingredients = d.ingredientLines.map { IngredientParser.parse(it) },
+        tags = d.tags,
+        createdAt = createdAt,
+    )
+
+    // ---------- recepten in bulk ----------
+    val bulk = BulkState()
+    private var bulkJob: Job? = null
+
+    fun startBulk(text: String, pagesPerLink: Int) {
+        val urls = text.lines().mapNotNull { line ->
+            RecipeImporter.extractUrl(line) ?: line.trim().takeIf { it.contains('.') && !it.contains(' ') }
+        }.map { RecipeImporter.normalizeUrl(it) }.distinct()
+        if (urls.isEmpty()) { bulk.error = "Plak minstens één link."; return }
+        stopBulk()
+        bulk.reset()
+        bulk.started = true
+        bulk.running = true
+        val st = _state.value
+        bulkJob = viewModelScope.launch {
+            try {
+                BulkImporter(fetch = { RecipeImporter.fetchHtml(it) }).run(
+                    listingUrls = urls,
+                    pagesPerListing = pagesPerLink,
+                    knownUrls = st.recipes.map { it.url }.filter { it.isNotBlank() }.toSet(),
+                    knownTitles = st.recipes.map { it.title }.toSet(),
+                    onProgress = { p -> bulk.page = p.page; bulk.pages = p.pages; bulk.checked = p.checked; if (bulk.results.isEmpty()) bulk.error = p.lastError },
+                    onFound = { f -> bulk.results.add(BulkItem(f.url, f.draft)) },
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                bulk.error = e.message ?: "Onbekende fout"
+            } finally {
+                bulk.running = false
+            }
+        }
+    }
+
+    fun stopBulk() { bulkJob?.cancel(); bulkJob = null; bulk.running = false }
+
+    fun toggleBulk(index: Int) {
+        if (index in bulk.results.indices) bulk.results[index] = bulk.results[index].let { it.copy(selected = !it.selected) }
+    }
+
+    fun selectAllBulk(selected: Boolean) {
+        for (i in bulk.results.indices) bulk.results[i] = bulk.results[i].copy(selected = selected)
+    }
+
+    /** Voegt de aangevinkte recepten toe aan de bibliotheek. */
+    fun addBulkSelected() {
+        stopBulk()
+        val chosen = bulk.results.filter { it.selected }
+        val base = now()
+        val recipes = chosen.mapIndexed { i, it -> recipeFromDraft(it.draft, it.url, base + i) }
+        if (recipes.isNotEmpty()) update { it.copy(recipes = it.recipes + recipes) }
+        bulk.added = recipes.size
     }
 
     fun blankRecipe() = Recipe(id = UUID.randomUUID().toString(), title = "", createdAt = now())

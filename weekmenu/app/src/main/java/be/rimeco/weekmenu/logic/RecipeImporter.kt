@@ -44,6 +44,12 @@ object RecipeImporter {
         }
     }
 
+    /** Haalt de HTML van een pagina op (voor bulk-import). */
+    suspend fun fetchHtml(url: String): String {
+        val normalized = normalizeUrl(url)
+        return withContext(Dispatchers.IO) { download(normalized) }
+    }
+
     suspend fun fetchDraft(url: String): Draft {
         val normalized = normalizeUrl(url)
         val html = withContext(Dispatchers.IO) { download(normalized) }

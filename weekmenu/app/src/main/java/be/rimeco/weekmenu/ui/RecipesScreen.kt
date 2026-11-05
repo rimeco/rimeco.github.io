@@ -124,6 +124,7 @@ private fun AddRecipeDialog(vm: AppViewModel, onDismiss: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Plak de link van een recept. Titel, foto, personen en ingrediënten worden automatisch ingelezen.")
+                TextButton({ onDismiss(); vm.push(Route.Bulk) }) { Text("Meerdere recepten tegelijk via een overzichtspagina…") }
                 OutlinedTextField(
                     value = url, onValueChange = { url = it }, singleLine = true,
                     label = { Text("Link naar recept") },

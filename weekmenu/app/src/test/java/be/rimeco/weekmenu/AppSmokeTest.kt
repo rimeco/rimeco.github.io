@@ -91,6 +91,13 @@ class AppSmokeTest {
         vm.push(Route.Import("http://localhost:1/geen-recept"))
         rule.waitForIdle()
 
+        // Bulk-import: invoerscherm
+        vm.push(Route.Bulk)
+        rule.waitForIdle()
+        rule.onNodeWithText("Recepten zoeken").assertExists()
+        rule.onNodeWithText("Pagina's per link").assertExists()
+        vm.pop()
+
         // Voorkeuren
         vm.stack.clear()
         rule.onNodeWithText("Voorkeuren").performClick()

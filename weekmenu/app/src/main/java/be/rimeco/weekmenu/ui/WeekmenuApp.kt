@@ -72,6 +72,7 @@ fun WeekmenuApp(vm: AppViewModel) {
                         is Route.RecipeEdit -> RecipeEditScreen(vm, state, top.initial)
                         is Route.PickMeal -> PickMealScreen(vm, state, top.date)
                         is Route.Import -> ImportScreen(vm, top.url)
+                        Route.Bulk -> BulkImportScreen(vm)
                     }
                 }
             }
