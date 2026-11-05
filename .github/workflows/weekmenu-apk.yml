@@ -23,7 +23,10 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - uses: android-actions/setup-android@v3
+      # De Android SDK staat al op de runner; enkel de licenties accepteren zodat Gradle ontbrekende onderdelen mag ophalen.
+      - name: Android-licenties accepteren
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+        working-directory: .
 
       - uses: gradle/actions/setup-gradle@v4
 
