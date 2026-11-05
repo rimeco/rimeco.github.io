@@ -116,4 +116,31 @@ class RecipeImporterTest {
         assertFalse(Tags.DESSERT in avond); assertFalse(Tags.MISC in avond); assertTrue(Tags.MEAT in avond)
         assertTrue(Tags.DESSERT in Tags.defaults && Tags.MISC in Tags.defaults)
     }
+
+    @Test fun tagFilterWithPositiveAndNegativeSelection() {
+        val dessert = listOf("Dessert", "Snel"); val soep = listOf("Soep", "Vegetarisch"); val ontbijt = listOf("Divers", "Snel")
+        val exclude = setOf("Dessert", "Divers")
+        assertFalse(Tags.matchesFilter(dessert, emptySet(), exclude))
+        assertFalse(Tags.matchesFilter(ontbijt, emptySet(), exclude))
+        assertTrue(Tags.matchesFilter(soep, emptySet(), exclude))
+        // tonen en uitsluiten gecombineerd: snel, maar geen dessert
+        assertTrue(Tags.matchesFilter(ontbijt, setOf("Snel"), setOf("Dessert")))
+        assertFalse(Tags.matchesFilter(dessert, setOf("Snel"), setOf("Dessert")))
+        // meerdere gevraagde tags: alle moeten aanwezig zijn
+        assertTrue(Tags.matchesFilter(soep, setOf("Soep", "Vegetarisch"), emptySet()))
+        assertFalse(Tags.matchesFilter(listOf("Soep"), setOf("Soep", "Vegetarisch"), emptySet()))
+        assertTrue(Tags.matchesFilter(emptyList(), emptySet(), emptySet()))
+    }
+
+    @Test fun tagChipCyclesThroughThreeStates() {
+        var inc = emptySet<String>(); var exc = emptySet<String>()
+        Tags.cycle("Dessert", inc, exc).let { inc = it.first; exc = it.second }
+        assertEquals(setOf("Dessert") to emptySet<String>(), inc to exc)            // 1x: tonen
+        Tags.cycle("Dessert", inc, exc).let { inc = it.first; exc = it.second }
+        assertEquals(emptySet<String>() to setOf("Dessert"), inc to exc)            // 2x: uitsluiten
+        Tags.cycle("Dessert", inc, exc).let { inc = it.first; exc = it.second }
+        assertEquals(emptySet<String>() to emptySet<String>(), inc to exc)          // 3x: uit
+        assertEquals(setOf("a", "b"), Tags.decodeSet(Tags.encodeSet(setOf("b", "a"))))
+        assertEquals(emptySet<String>(), Tags.decodeSet(""))
+    }
 }

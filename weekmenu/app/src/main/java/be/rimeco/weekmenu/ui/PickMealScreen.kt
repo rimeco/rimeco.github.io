@@ -36,8 +36,12 @@ fun PickMealScreen(vm: AppViewModel, state: AppState, dateStr: String) {
     val date = LocalDate.parse(dateStr)
     val entry = state.entryFor(date)
     var query by remember { mutableStateOf("") }
+    // Voor een avondmaal staat "Geen Dessert" standaard aan; tik erop om desserts toch te zien.
+    var include by remember { mutableStateOf(emptySet<String>()) }
+    var exclude by remember { mutableStateOf(setOf(be.rimeco.weekmenu.data.Tags.DESSERT)) }
     var custom by remember { mutableStateOf(entry.customName ?: "") }
     val recipes = state.recipes
+        .filter { be.rimeco.weekmenu.data.Tags.matchesFilter(it.tags, include, exclude) }
         .filter { query.isBlank() || it.title.contains(query, ignoreCase = true) || it.tags.any { t -> t.contains(query, ignoreCase = true) } }
         .sortedWith(compareByDescending { it.rating })
 
@@ -59,6 +63,12 @@ fun PickMealScreen(vm: AppViewModel, state: AppState, dateStr: String) {
                     value = query, onValueChange = { query = it }, singleLine = true,
                     label = { Text("Zoek in je recepten") },
                     modifier = Modifier.fillMaxWidth().padding(16.dp, 8.dp),
+                )
+            }
+            item {
+                TagFilterRow(
+                    (state.recipes.flatMap { it.tags } + include + exclude).distinct().sorted(), include, exclude,
+                    onChange = { i, e -> include = i; exclude = e },
                 )
             }
             item {

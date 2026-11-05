@@ -119,4 +119,29 @@ class AppSmokeTest {
         assertEquals(listOf("Vegetarisch", "Dessert"), tags["c"])
         assertEquals(0, vm.suggestMissingTags())                          // tweede keer: niets meer te doen
     }
+
+    @Test fun recipeListCanExcludeTags() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val vm = AppViewModel(app)
+        vm.upsertRecipe(Recipe("a", "Chocoladetaart", minutes = 60, tags = listOf("Dessert")))
+        vm.upsertRecipe(Recipe("b", "Kippensoep", minutes = 30, tags = listOf("Soep", "Vlees")))
+        vm.upsertRecipe(Recipe("c", "Smoothie", minutes = 5, tags = listOf("Divers")))
+        rule.setContent { WeekmenuTheme { WeekmenuApp(vm) } }
+        rule.onNodeWithText("Recepten").performClick()
+        rule.onNodeWithText("Chocoladetaart").assertExists(); rule.onNodeWithText("Smoothie").assertExists()
+        // Dessert: 1x tonen, 2x uitsluiten
+        rule.onNodeWithText("Dessert").performClick()
+        rule.onNodeWithText("Kippensoep").assertDoesNotExist()
+        rule.onNodeWithText("Dessert").performClick()
+        rule.onNodeWithText("Geen Dessert").assertExists()
+        rule.onNodeWithText("Chocoladetaart").assertDoesNotExist()
+        rule.onNodeWithText("Kippensoep").assertExists()
+        // ook Divers uitsluiten: enkel de soep blijft over
+        rule.onNodeWithText("Divers").performClick(); rule.onNodeWithText("Divers").performClick()
+        rule.onNodeWithText("Smoothie").assertDoesNotExist()
+        rule.onNodeWithText("Kippensoep").assertExists()
+        // filters wissen
+        rule.onNodeWithText("Wis filters").performClick()
+        rule.onNodeWithText("Chocoladetaart").assertExists(); rule.onNodeWithText("Smoothie").assertExists()
+    }
 }

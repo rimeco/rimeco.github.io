@@ -41,6 +41,8 @@ Alle gegevens blijven lokaal op je telefoon (geen account, geen server).
   Desserts worden nooit als avondmaaltijd voorgesteld; "Divers" (ontbijt, snacks, dranken, sauzen) kan je bij *Nooit voorstellen* zetten.
   Voor recepten die je al had: *Voorkeuren → Recepten → Tags Dessert/Divers aanvullen*.
 - Ingrediënten schalen mee met het aantal personen.
+- **Filteren op tags, ook negatief**: tik op een tag om te tonen, nogmaals om uit te sluiten ("Geen Dessert"), nogmaals om uit te zetten.
+  Meerdere tags combineren kan (alle gekozen tags moeten kloppen, geen enkele uitgesloten). Bij het kiezen van een maaltijd voor een dag staat "Geen Dessert" standaard aan.
 
 **Boodschappenlijst** (zoals Google Keep: afvinkbaar, afgevinkt onderaan inklapbaar)
 - *Naar boodschappen* in het weekmenu zet de ingrediënten van de week op de lijst, **omgerekend naar het aantal

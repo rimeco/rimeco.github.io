@@ -41,6 +41,21 @@ object Tags {
     )
     private val miscExact = setOf("saus", "sauzen", "lunch", "drankje", "sap", "ontbijtgranen", "overnight")
 
+    /** Past een tagfilter toe: alle gevraagde tags moeten aanwezig zijn en geen enkele uitgesloten tag. */
+    fun matchesFilter(tags: List<String>, include: Set<String>, exclude: Set<String>): Boolean =
+        include.all { it in tags } && exclude.none { it in tags }
+
+    /** Eén tik op een tag-chip: uit -> tonen -> uitsluiten -> uit. Geeft de nieuwe (tonen, uitsluiten) terug. */
+    fun cycle(tag: String, include: Set<String>, exclude: Set<String>): Pair<Set<String>, Set<String>> = when (tag) {
+        in include -> (include - tag) to (exclude + tag)
+        in exclude -> include to (exclude - tag)
+        else -> (include + tag) to exclude
+    }
+
+    /** Voor in een bewaarbare toestand (rememberSaveable): "a|b" <-> {a, b}. */
+    fun encodeSet(set: Set<String>): String = set.sorted().joinToString("|")
+    fun decodeSet(text: String): Set<String> = text.split('|').filter { it.isNotEmpty() }.toSet()
+
     private fun tokens(text: String): List<String> =
         text.lowercase().split(Regex("[^a-zà-ÿ]+")).filter { it.isNotBlank() }
 

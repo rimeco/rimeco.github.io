@@ -49,13 +49,16 @@ private enum class Sort(val label: String) { RATING("Beste eerst"), NAME("A–Z"
 fun RecipesScreen(vm: AppViewModel, state: AppState) {
     var query by rememberSaveable { mutableStateOf("") }
     var sortName by rememberSaveable { mutableStateOf(Sort.RATING.name) }
-    var tagFilter by rememberSaveable { mutableStateOf<String?>(null) }
+    var includeTags by rememberSaveable { mutableStateOf("") }
+    var excludeTags by rememberSaveable { mutableStateOf("") }
+    val include = be.rimeco.weekmenu.data.Tags.decodeSet(includeTags)
+    val exclude = be.rimeco.weekmenu.data.Tags.decodeSet(excludeTags)
     var showAdd by remember { mutableStateOf(false) }
     val sort = Sort.valueOf(sortName)
 
     val shown = state.recipes
         .filter { query.isBlank() || it.title.contains(query, true) || it.ingredients.any { i -> i.name.contains(query, true) } }
-        .filter { tagFilter == null || tagFilter in it.tags }
+        .filter { be.rimeco.weekmenu.data.Tags.matchesFilter(it.tags, include, exclude) }
         .let { list ->
             when (sort) {
                 Sort.RATING -> list.sortedWith(compareByDescending<be.rimeco.weekmenu.data.Recipe> { it.rating }.thenBy { it.title.lowercase() })
@@ -63,7 +66,7 @@ fun RecipesScreen(vm: AppViewModel, state: AppState) {
                 Sort.NEWEST -> list.sortedByDescending { it.createdAt }
             }
         }
-    val usedTags = state.recipes.flatMap { it.tags }.distinct().sorted()
+    val usedTags = (state.recipes.flatMap { it.tags } + include + exclude).distinct().sorted()
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -78,11 +81,16 @@ fun RecipesScreen(vm: AppViewModel, state: AppState) {
                 }
             }
             if (usedTags.isNotEmpty()) {
-                LazyRow(contentPadding = PaddingValues(16.dp, 0.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(usedTags) { t ->
-                        FilterChip(selected = tagFilter == t, onClick = { tagFilter = if (tagFilter == t) null else t }, label = { Text(t) })
-                    }
-                }
+                TagFilterRow(
+                    usedTags, include, exclude,
+                    onChange = { i, e -> includeTags = be.rimeco.weekmenu.data.Tags.encodeSet(i); excludeTags = be.rimeco.weekmenu.data.Tags.encodeSet(e) },
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+                Text(
+                    "Tik op een tag: tonen · nogmaals: uitsluiten · nogmaals: uit",
+                    Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             if (state.recipes.isEmpty()) {
                 Text(

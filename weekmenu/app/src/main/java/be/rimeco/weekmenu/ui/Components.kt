@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -116,6 +117,43 @@ fun RecipeRow(recipe: Recipe, onClick: () -> Unit, modifier: Modifier = Modifier
                 ).joinToString(" · ")
                 if (extra.isNotBlank()) Text("  $extra", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+        }
+    }
+}
+
+/**
+ * Rij met tag-chips met drie standen: tik = tonen, nogmaals tikken = uitsluiten ("Geen …"), nogmaals = uit.
+ * Is er een filter actief, dan staat vooraan een chip om alles te wissen.
+ */
+@Composable
+fun TagFilterRow(
+    tags: List<String>,
+    included: Set<String>,
+    excluded: Set<String>,
+    onChange: (include: Set<String>, exclude: Set<String>) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    androidx.compose.foundation.lazy.LazyRow(
+        modifier,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (included.isNotEmpty() || excluded.isNotEmpty()) {
+            item {
+                androidx.compose.material3.AssistChip(onClick = { onChange(emptySet(), emptySet()) }, label = { Text("Wis filters") })
+            }
+        }
+        items(tags) { t ->
+            val isExcluded = t in excluded
+            androidx.compose.material3.FilterChip(
+                selected = t in included || isExcluded,
+                onClick = { val (i, e) = be.rimeco.weekmenu.data.Tags.cycle(t, included, excluded); onChange(i, e) },
+                label = { Text(if (isExcluded) "Geen $t" else t) },
+                colors = if (isExcluded) androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.errorContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onErrorContainer,
+                ) else androidx.compose.material3.FilterChipDefaults.filterChipColors(),
+            )
         }
     }
 }
