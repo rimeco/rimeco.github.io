@@ -16,6 +16,7 @@ Alle gegevens blijven lokaal op je telefoon (geen account, geen server).
   blader per week met ◀ ▶, tik op de titel om naar de huidige week te springen.
 - Aantal personen per dag: standaard **3 op weekdagen** en **4 op za/zo**, per dag aan te passen met − / +
   (de standaardwaarden zijn in *Voorkeuren* te wijzigen).
+- Per dag een knop **→ Open recept**: toont het recept met de ingrediënten omgerekend naar het aantal personen van die dag.
 - Kies een recept uit je verzameling of typ een eigen invoer ("Restaurant", "Restjes", …).
 - **Menu voorstellen**: vult lege dagen (of de hele week) automatisch in. Met ↻ gooi je één dag opnieuw.
   Alles is ongedaan te maken via de melding onderaan.

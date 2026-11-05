@@ -51,10 +51,10 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 
 @Composable
-fun RecipeDetailScreen(vm: AppViewModel, state: AppState, id: String) {
+fun RecipeDetailScreen(vm: AppViewModel, state: AppState, id: String, initialPersons: Int? = null) {
     val recipe = state.recipe(id)
     if (recipe == null) { LaunchedEffect(Unit) { vm.pop() }; return }
-    var persons by remember(id) { mutableIntStateOf(recipe.servings) }
+    var persons by remember(id) { mutableIntStateOf(initialPersons ?: recipe.servings) }
     var confirmDelete by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()

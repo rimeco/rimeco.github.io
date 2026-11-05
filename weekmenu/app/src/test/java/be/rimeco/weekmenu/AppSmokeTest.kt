@@ -2,6 +2,7 @@ package be.rimeco.weekmenu
 
 import android.app.Application
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -13,6 +14,7 @@ import be.rimeco.weekmenu.ui.AppViewModel
 import be.rimeco.weekmenu.ui.Route
 import be.rimeco.weekmenu.ui.WeekmenuApp
 import be.rimeco.weekmenu.ui.WeekmenuTheme
+import be.rimeco.weekmenu.ui.dayShort
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -143,5 +145,18 @@ class AppSmokeTest {
         // filters wissen
         rule.onNodeWithText("Wis filters").performClick()
         rule.onNodeWithText("Chocoladetaart").assertExists(); rule.onNodeWithText("Smoothie").assertExists()
+    }
+
+    @Test fun dayCardOpensTheRecipeForThatDaysPersons() {
+        val vm = AppViewModel(ApplicationProvider.getApplicationContext<Application>())
+        vm.upsertRecipe(Recipe("a", "Wafels van knolselderij", servings = 4, ingredients = listOf(IngredientParser.parse("400 g knolselderij"))))
+        val today = LocalDate.now()
+        vm.setMeal(today, "a"); vm.setPersons(today, 2)
+        rule.setContent { WeekmenuTheme { WeekmenuApp(vm) } }
+        rule.onNodeWithContentDescription("Open recept van ${today.dayShort()} ${today.dayOfMonth}").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText("Zet op boodschappenlijst").assertExists()
+        rule.onNodeWithText("2 pers.").assertExists()          // het aantal personen van die dag, niet de 4 van het recept
+        rule.onNodeWithText("200 g").assertExists()            // 400 g × 2/4
     }
 }

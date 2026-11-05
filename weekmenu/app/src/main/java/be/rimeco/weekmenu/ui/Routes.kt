@@ -3,7 +3,8 @@ package be.rimeco.weekmenu.ui
 import be.rimeco.weekmenu.data.Recipe
 
 sealed interface Route {
-    data class RecipeDetail(val id: String) : Route
+    /** [persons]: voor hoeveel personen de ingrediënten getoond worden (bv. het aantal van die dag); anders het aantal van het recept. */
+    data class RecipeDetail(val id: String, val persons: Int? = null) : Route
     /** [initial] is een bestaand recept (bewerken) of een nieuw/ingelezen concept. */
     data class RecipeEdit(val initial: Recipe) : Route
     data class PickMeal(val date: String) : Route

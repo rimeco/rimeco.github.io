@@ -68,7 +68,7 @@ fun WeekmenuApp(vm: AppViewModel) {
             Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 key(top) {
                     when (top) {
-                        is Route.RecipeDetail -> RecipeDetailScreen(vm, state, top.id)
+                        is Route.RecipeDetail -> RecipeDetailScreen(vm, state, top.id, top.persons)
                         is Route.RecipeEdit -> RecipeEditScreen(vm, state, top.initial)
                         is Route.PickMeal -> PickMealScreen(vm, state, top.date)
                         is Route.Import -> ImportScreen(vm, top.url)

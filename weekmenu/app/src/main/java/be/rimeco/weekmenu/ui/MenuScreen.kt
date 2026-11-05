@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Refresh
@@ -183,6 +184,11 @@ private fun DayCard(vm: AppViewModel, state: AppState, date: LocalDate, isToday:
                     }
                 }
                 Stepper(entry.persons, { vm.setPersons(date, it) }, 1..20, label = { "$it pers." })
+            }
+            if (recipe != null) {
+                IconButton({ vm.push(Route.RecipeDetail(recipe.id, entry.persons)) }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Open recept van ${date.dayShort()} ${date.dayOfMonth}")
+                }
             }
             IconButton(onReroll) { Icon(Icons.Filled.Refresh, contentDescription = "Ander voorstel voor deze dag") }
         }
