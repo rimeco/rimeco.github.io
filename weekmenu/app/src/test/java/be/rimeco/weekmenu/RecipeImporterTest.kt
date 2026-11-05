@@ -102,4 +102,18 @@ class RecipeImporterTest {
             <div id="react-recipe-ingredients" data-ingredient-groups="[{&quot;ingredients&quot;:[{&quot;quantity&quot;:&quot;9.00&quot;,&quot;ingredient&quot;:{&quot;nameDisplay&quot;:&quot;ander&quot;}}]}]"></div>"""
         assertEquals(listOf("1 ei"), RecipeImporter.parse(html).ingredientLines)
     }
+
+    @Test fun suggestsDessertAndMiscTags() {
+        val brownie = Tags.suggest("Brownie mugcake met 6 ingrediënten", listOf("bloem", "cacao", "suiker"))
+        assertTrue(Tags.DESSERT in brownie); assertFalse(Tags.VEGETARIAN in brownie)
+        assertTrue(Tags.DESSERT in Tags.suggest("Gebakken appel", listOf("appel"), categoryText = "Dessert"))
+        assertTrue(Tags.DESSERT in Tags.suggest("Frozen yoghurt bites", listOf("yoghurt"), categoryText = "Nagerecht"))
+        val ontbijt = Tags.suggest("Havermoutbowl", listOf("havermout", "melk"), categoryText = "Ontbijt")
+        assertTrue(Tags.MISC in ontbijt); assertFalse(Tags.DESSERT in ontbijt); assertFalse(Tags.VEGETARIAN in ontbijt)
+        assertTrue(Tags.MISC in Tags.suggest("Tzatzikidip", listOf("yoghurt", "komkommer")))
+        // een gewoon avondmaal blijft ongemoeid, ook met woorden die erop lijken ("ijsbergsla", "champignons")
+        val avond = Tags.suggest("Wraps met ijsbergsla en kip", listOf("kipfilet", "ijsbergsla", "champignons"))
+        assertFalse(Tags.DESSERT in avond); assertFalse(Tags.MISC in avond); assertTrue(Tags.MEAT in avond)
+        assertTrue(Tags.DESSERT in Tags.defaults && Tags.MISC in Tags.defaults)
+    }
 }

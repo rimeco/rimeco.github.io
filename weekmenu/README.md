@@ -37,7 +37,9 @@ Alle gegevens blijven lokaal op je telefoon (geen account, geen server).
   browser worden gebruikt. Getest op de echte Libelle-weekmenupagina (18 recepten) en receptpagina.
 - Lukt het inlezen niet (site blokkeert apps of heeft geen receptgegevens)? Dan vul je het recept zelf in.
 - **Beoordeling met 1–5 sterren** (tik nogmaals op dezelfde ster om te wissen).
-- Tags (Vegetarisch, Vlees, Vis, Pasta, Soep, Snel, …) worden uit de ingrediënten geraden en zijn aan te passen.
+- Tags (Vegetarisch, Vlees, Vis, Pasta, Soep, Snel, Ovenschotel, Wraps, **Dessert**, **Divers**, …) worden uit titel, categorie en ingrediënten geraden en zijn aan te passen.
+  Desserts worden nooit als avondmaaltijd voorgesteld; "Divers" (ontbijt, snacks, dranken, sauzen) kan je bij *Nooit voorstellen* zetten.
+  Voor recepten die je al had: *Voorkeuren → Recepten → Tags Dessert/Divers aanvullen*.
 - Ingrediënten schalen mee met het aantal personen.
 
 **Boodschappenlijst** (zoals Google Keep: afvinkbaar, afgevinkt onderaan inklapbaar)

@@ -91,7 +91,15 @@ fun PrefsScreen(vm: AppViewModel, state: AppState) {
                 }
             }
         }
-        Hint("Het voorstel wisselt vlees, vis, pasta en soep af en kiest geen recept dat net op het menu stond.")
+        Hint("Het voorstel wisselt vlees, vis, pasta en soep af, kiest geen recept dat net op het menu stond en stelt nooit een dessert voor. Tip: zet “Divers” bij “Nooit voorstellen” om ook ontbijt, snacks en dranken te vermijden.")
+
+        Section("Recepten")
+        var tagsMessage by remember { mutableStateOf<String?>(null) }
+        OutlinedButton({
+            val n = vm.suggestMissingTags()
+            tagsMessage = if (n == 0) "Geen recepten gevonden die nog een tag Dessert of Divers missen." else "$n ${if (n == 1) "recept" else "recepten"} kregen de tag Dessert of Divers."
+        }, Modifier.fillMaxWidth()) { Text("Tags Dessert/Divers aanvullen") }
+        Hint(tagsMessage ?: "Raadt de tags Dessert en Divers (ontbijt, snacks, dranken, sauzen) voor recepten die je al hebt. Tags die je zelf instelde, blijven staan.")
 
         Section("Boodschappenlijst")
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

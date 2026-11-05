@@ -106,4 +106,17 @@ class AppSmokeTest {
         rule.onNodeWithText("Gezin aanmaken").assertExists()
         rule.onNodeWithText("Aantal personen").assertExists()
     }
+
+    @Test fun addsMissingDessertAndMiscTagsToExistingRecipes() {
+        val vm = AppViewModel(ApplicationProvider.getApplicationContext<Application>())
+        vm.upsertRecipe(Recipe("a", "Chocolade brownie", tags = listOf("Vegetarisch"), ingredients = listOf(IngredientParser.parse("200 g bloem"))))
+        vm.upsertRecipe(Recipe("b", "Pasta met kip", tags = listOf("Vlees", "Pasta")))
+        vm.upsertRecipe(Recipe("c", "Havermout ontbijtbowl", tags = listOf("Vegetarisch", "Dessert")))   // heeft al een eigen tag: blijft ongemoeid
+        assertEquals(1, vm.suggestMissingTags())
+        val tags = vm.state.value.recipes.associate { it.id to it.tags }
+        assertEquals(listOf("Dessert"), tags["a"])                       // Vegetarisch vervangen door Dessert
+        assertEquals(listOf("Vlees", "Pasta"), tags["b"])
+        assertEquals(listOf("Vegetarisch", "Dessert"), tags["c"])
+        assertEquals(0, vm.suggestMissingTags())                          // tweede keer: niets meer te doen
+    }
 }

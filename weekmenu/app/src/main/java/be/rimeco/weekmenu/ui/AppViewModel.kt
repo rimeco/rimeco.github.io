@@ -9,6 +9,7 @@ import be.rimeco.weekmenu.data.MenuEntry
 import be.rimeco.weekmenu.data.Persistence
 import be.rimeco.weekmenu.data.Prefs
 import be.rimeco.weekmenu.data.Recipe
+import be.rimeco.weekmenu.data.Tags
 import be.rimeco.weekmenu.data.defaultPersons
 import be.rimeco.weekmenu.data.entryFor
 import be.rimeco.weekmenu.logic.BulkImporter
@@ -267,6 +268,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             recipes = s.recipes.filter { it.id != id },
             menu = s.menu.mapValues { (_, e) -> if (e.recipeId == id) e.copy(recipeId = null) else e },
         )
+    }
+
+    /** Vult bij bestaande recepten de tags Dessert/Divers aan (op basis van titel en ingrediënten). Geeft het aantal aangepaste recepten terug. */
+    fun suggestMissingTags(): Int {
+        var changed = 0
+        update { s ->
+            s.copy(recipes = s.recipes.map { r ->
+                if (Tags.DESSERT in r.tags || Tags.MISC in r.tags) return@map r
+                val sug = Tags.suggest(r.title, r.ingredients.map { it.name }, "", r.minutes)
+                val add = sug.filter { it == Tags.DESSERT || it == Tags.MISC }
+                if (add.isEmpty()) return@map r
+                changed++
+                var tags = r.tags + add
+                if (Tags.VEGETARIAN !in sug) tags = tags - Tags.VEGETARIAN
+                r.copy(tags = tags)
+            })
+        }
+        return changed
     }
 
     fun setRating(id: String, rating: Int) = update { s ->

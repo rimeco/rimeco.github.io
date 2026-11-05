@@ -140,4 +140,12 @@ class MenuPlannerTest {
         val s = state(listOf(r("a", 3, listOf("Vis"))), Prefs(vegDaysPerWeek = 2), mapOf(mon.toString() to MenuEntry(mon.toString(), "a", persons = 5)))
         assertEquals(s, p.decode(p.encode(s)))
     }
+
+    @Test fun neverProposesDessertsAsADinner() {
+        val s = state(listOf(r("soep"), r("brownie", 5, listOf(Tags.DESSERT)), r("pasta"), r("curry")), Prefs(avoidRepeatDays = 0))
+        repeat(20) { seed ->
+            val res = MenuPlanner.suggest(s, week, true, Random(seed))
+            assertFalse("brownie" in res.picks.values)
+        }
+    }
 }

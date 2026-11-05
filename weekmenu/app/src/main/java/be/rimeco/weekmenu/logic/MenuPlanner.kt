@@ -16,7 +16,7 @@ import kotlin.random.Random
 /**
  * Stelt een weekmenu voor op basis van de voorkeuren:
  *  - hogere rating = grotere kans (niet-beoordeeld telt als 3 sterren)
- *  - minimum aantal sterren, uitgesloten tags, voorkeurstags
+ *  - minimum aantal sterren, uitgesloten tags, voorkeurstags; desserts worden nooit voorgesteld
  *  - hetzelfde recept niet binnen X dagen opnieuw
  *  - streefaantal vegetarische dagen, max bereidingstijd op weekdagen
  *  - afwisseling: niet twee dagen na elkaar vlees / vis / pasta / soep
@@ -46,7 +46,8 @@ object MenuPlanner {
         if (replaceExisting) targets.forEach { d -> state.menu[d.toString()]?.let { working[d.toString()] = it.copy(recipeId = null, customName = null) } }
 
         val base = state.recipes.filter { r ->
-            r.tags.none { it in p.excludedTags } && effRating(r) >= p.minRating
+            Tags.DESSERT !in r.tags &&   // een dessert is geen avondmaal
+                r.tags.none { it in p.excludedTags } && effRating(r) >= p.minRating
         }
         val picks = linkedMapOf<String, String>()
         val unfilled = mutableListOf<LocalDate>()
