@@ -11,7 +11,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import android.content.Intent
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import be.rimeco.weekmenu.sync.SyncStatus
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -28,6 +42,8 @@ import be.rimeco.weekmenu.data.allTags
 fun PrefsScreen(vm: AppViewModel, state: AppState) {
     val p = state.prefs
     Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        FamilySection(vm, state)
+
         Section("Aantal personen")
         PrefRow("Weekdagen (ma–vr)") { Stepper(p.weekdayPersons, { v -> vm.updatePrefs { it.copy(weekdayPersons = v) } }, 1..20, label = { "$it pers." }) }
         PrefRow("Weekend (za–zo)") { Stepper(p.weekendPersons, { v -> vm.updatePrefs { it.copy(weekendPersons = v) } }, 1..20, label = { "$it pers." }) }
@@ -103,5 +119,86 @@ private fun PrefRow(label: String, control: @Composable () -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.weight(1f))
         control()
+    }
+}
+
+@Composable
+private fun FamilySection(vm: AppViewModel, state: AppState) {
+    val info by vm.syncInfo.collectAsStateWithLifecycle()
+    val code = state.prefs.householdId
+    val context = LocalContext.current
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var joinCode by remember { mutableStateOf("") }
+    var confirmJoin by remember { mutableStateOf(false) }
+    var confirmLeave by remember { mutableStateOf(false) }
+
+    Section("Gezin & synchronisatie")
+    if (code.isBlank()) {
+        Hint("Deel je recepten, weekmenu en boodschappenlijst live met je gezin. Eén persoon maakt het gezin aan, de anderen sluiten aan met de gezinscode.")
+        Button(
+            onClick = { busy = true; error = null; vm.createHousehold { r -> busy = false; error = r.exceptionOrNull()?.message } },
+            enabled = !busy, modifier = Modifier.fillMaxWidth(),
+        ) { Text(if (busy) "Bezig…" else "Gezin aanmaken") }
+        OutlinedTextField(
+            joinCode, { joinCode = it; error = null }, singleLine = true, label = { Text("Gezinscode van iemand anders") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedButton({ confirmJoin = true }, enabled = !busy && joinCode.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Deelnemen") }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Gezinscode")
+            Text(vm.formatCode(code), style = MaterialTheme.typography.headlineSmall, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold)
+            val label = when (info.status) {
+                SyncStatus.OFF -> ""
+                SyncStatus.CONNECTING -> "Verbinden…"
+                SyncStatus.ONLINE -> "✓ ${info.message}"
+                else -> info.message
+            }
+            if (label.isNotBlank()) {
+                Text(
+                    label, style = MaterialTheme.typography.bodySmall,
+                    color = if (info.status == SyncStatus.ERROR) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button({
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(
+                        Intent.EXTRA_TEXT,
+                        "Doe mee met ons Weekmenu! Installeer de app, ga naar Voorkeuren → Gezin & synchronisatie → Deelnemen en vul deze code in: ${vm.formatCode(code)}",
+                    )
+                }
+                context.startActivity(Intent.createChooser(send, "Gezinscode delen"))
+            }, Modifier.weight(1f)) { Text("Code delen") }
+            OutlinedButton({ confirmLeave = true }, Modifier.weight(1f)) { Text("Gezin verlaten") }
+        }
+    }
+
+    if (confirmJoin) {
+        AlertDialog(
+            onDismissRequest = { confirmJoin = false },
+            title = { Text("Deelnemen aan het gezin?") },
+            text = { Text("Je recepten, weekmenu en boodschappenlijst op dit toestel worden vervangen door die van het gezin.") },
+            confirmButton = {
+                TextButton({
+                    confirmJoin = false; busy = true; error = null
+                    vm.joinHousehold(joinCode) { r -> busy = false; error = r.exceptionOrNull()?.message; if (r.isSuccess) joinCode = "" }
+                }) { Text("Deelnemen") }
+            },
+            dismissButton = { TextButton({ confirmJoin = false }) { Text("Annuleren") } },
+        )
+    }
+    if (confirmLeave) {
+        AlertDialog(
+            onDismissRequest = { confirmLeave = false },
+            title = { Text("Gezin verlaten?") },
+            text = { Text("Dit toestel stopt met synchroniseren. Je houdt een lokale kopie van alles; de anderen merken niets.") },
+            confirmButton = { TextButton({ confirmLeave = false; vm.leaveHousehold() }) { Text("Verlaten") } },
+            dismissButton = { TextButton({ confirmLeave = false }) { Text("Annuleren") } },
+        )
     }
 }

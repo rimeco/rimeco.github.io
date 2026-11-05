@@ -48,6 +48,21 @@ Alle gegevens blijven lokaal op je telefoon (geen account, geen server).
 - Maximale bereidingstijd op weekdagen.
 - Wisselt vlees / vis / pasta / soep af (niet twee dagen na elkaar).
 
+## Gezin & synchronisatie (Firebase)
+
+Via *Voorkeuren → Gezin & synchronisatie* delen meerdere toestellen live **recepten, weekmenu en boodschappenlijst**.
+Eén persoon kiest *Gezin aanmaken* en deelt de gezinscode; de anderen kiezen *Deelnemen*.
+Werkt ook offline: wijzigingen worden verstuurd zodra er weer verbinding is. Voorkeuren blijven per persoon.
+
+Eenmalige opzet in de [Firebase-console](https://console.firebase.google.com) (gratis Spark-abonnement):
+1. Project maken en een Android-app registreren met pakketnaam `com.jean.weekmenu`; `app/google-services.json` staat in de repo.
+2. **Firestore Database** aanmaken (Europese locatie, productiemodus).
+3. **Authentication → Aanmeldmethode → Anoniem** aanzetten.
+4. **Firestore → Regels**: plak de inhoud van [`firestore.rules`](firestore.rules) en klik op *Publiceren*.
+
+Gegevens staan onder `households/{gezinscode}/…`; alleen wie de (16 tekens lange, willekeurige) code kent, heeft toegang.
+Conflicten worden per item opgelost (laatste wijziging wint), zodat twee mensen tegelijk kunnen afvinken.
+
 ## Installeren op je telefoon
 
 1. Elke push naar `main` of een `claude/**`-branch bouwt via GitHub Actions een APK
@@ -72,6 +87,7 @@ Kotlin + Jetpack Compose (Material 3), minSdk 26 (Android 8+).
 | Map | Inhoud |
 |---|---|
 | `data/` | datamodel, JSON-opslag in één bestand (`filesDir/weekmenu.json`), tags |
+| `sync/` | Firestore-synchronisatie (`SyncModel` is puur en getest, `SyncEngine` praat met Firebase) |
 | `logic/` | `RecipeImporter` (JSON-LD), `IngredientParser`, `ShoppingBuilder`, `MenuPlanner`, `Units` – puur Kotlin, volledig getest |
 | `ui/` | schermen en `AppViewModel` |
 
@@ -81,6 +97,6 @@ Tests: `./gradlew testDebugUnitTest` (parser, import, planner, boodschappenlijst
 
 - Sommige sites (bv. met bot-bescherming) weigeren het ophalen van de pagina; dan kan je het recept handmatig invullen.
   Pagina's zonder schema.org-receptgegevens leveren enkel titel en foto op.
-- Back-up/synchronisatie tussen toestellen zit er (nog) niet in. Android-back-up van de app-gegevens staat wel aan.
+- Deelnemen aan een gezin vervangt de lokale recepten, het menu en de lijst van dat toestel door die van het gezin.
 - De APK is ondertekend met een in de repo aanwezige sleutel (`app/debug.keystore`) – prima voor eigen gebruik,
   niet voor publicatie in de Play Store.

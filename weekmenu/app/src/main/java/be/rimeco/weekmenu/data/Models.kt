@@ -80,6 +80,8 @@ data class Prefs(
     val excludedTags: List<String> = emptyList(),
     /** Zout, peper en water niet op de boodschappenlijst zetten. */
     val skipStaples: Boolean = true,
+    /** Gezinscode van de gedeelde Firestore-omgeving; leeg = enkel lokaal. Wordt zelf niet gesynchroniseerd. */
+    val householdId: String = "",
 )
 
 @Serializable

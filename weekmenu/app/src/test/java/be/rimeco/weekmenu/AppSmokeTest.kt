@@ -95,6 +95,8 @@ class AppSmokeTest {
         vm.stack.clear()
         rule.onNodeWithText("Voorkeuren").performClick()
         rule.waitForIdle()
+        rule.onNodeWithText("Gezin & synchronisatie").assertExists()
+        rule.onNodeWithText("Gezin aanmaken").assertExists()
         rule.onNodeWithText("Aantal personen").assertExists()
     }
 }

@@ -15,6 +15,11 @@ import be.rimeco.weekmenu.logic.IngredientParser
 import be.rimeco.weekmenu.logic.MenuPlanner
 import be.rimeco.weekmenu.logic.RecipeImporter
 import be.rimeco.weekmenu.logic.ShoppingBuilder
+import be.rimeco.weekmenu.sync.SyncEngine
+import be.rimeco.weekmenu.sync.SyncInfo
+import be.rimeco.weekmenu.sync.SyncModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,10 +38,57 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun now() = System.currentTimeMillis()
 
+    private val _syncInfo = MutableStateFlow(SyncInfo())
+    val syncInfo: StateFlow<SyncInfo> = _syncInfo.asStateFlow()
+
+    /** Raakt Firebase pas aan als er een gezin ingesteld is. */
+    private val sync = SyncEngine(
+        getState = { _state.value },
+        applyRemote = { s -> _state.value = s; store.save { _state.value } },
+        onInfo = { _syncInfo.value = it },
+    )
+
+    init {
+        val code = _state.value.prefs.householdId
+        if (code.isNotBlank()) viewModelScope.launch { sync.resume(code) }
+    }
+
     private fun update(f: (AppState) -> AppState) {
         _state.update(f)
         store.save { _state.value }
+        sync.onLocalChange(_state.value)
     }
+
+    // ---------- gezin / synchronisatie ----------
+    /** Maakt een nieuw gezin en uploadt de lokale gegevens. */
+    fun createHousehold(onResult: (Result<String>) -> Unit) {
+        viewModelScope.launch {
+            val r = runCatching { sync.create() }.fold(
+                onSuccess = { code -> update { it.copy(prefs = it.prefs.copy(householdId = code)) }; Result.success(code) },
+                onFailure = { e -> Result.failure(Exception(SyncEngine.friendly(e))) },
+            )
+            onResult(r)
+        }
+    }
+
+    /** Sluit aan bij een bestaand gezin; lokale recepten/menu/lijst worden vervangen door die van het gezin. */
+    fun joinHousehold(code: String, onResult: (Result<String>) -> Unit) {
+        viewModelScope.launch {
+            val r = runCatching { sync.join(code) }.fold(
+                onSuccess = { c -> update { it.copy(prefs = it.prefs.copy(householdId = c)) }; Result.success(c) },
+                onFailure = { e -> Result.failure(Exception(SyncEngine.friendly(e))) },
+            )
+            onResult(r)
+        }
+    }
+
+    /** Stopt met synchroniseren; de gegevens blijven als lokale kopie op dit toestel. */
+    fun leaveHousehold() {
+        sync.stop()
+        update { it.copy(prefs = it.prefs.copy(householdId = "")) }
+    }
+
+    fun formatCode(code: String) = SyncModel.formatCode(code)
 
     // ---------- navigatie ----------
     fun push(r: Route) { stack.add(r) }

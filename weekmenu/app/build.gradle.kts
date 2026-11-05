@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -10,7 +11,8 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "be.rimeco.weekmenu"
+        // Moet overeenkomen met de pakketnaam in google-services.json (Firebase).
+        applicationId = "com.jean.weekmenu"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -75,6 +77,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("io.coil-kt:coil-compose:2.7.0")
+
+    // Gezinssynchronisatie (Firestore + anonieme aanmelding)
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")
