@@ -1,18 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Voorgrond van het adaptieve icoon. De inhoud vult de veilige zone (66 dp, gecentreerd in 108 dp):
-  een groot bord met vork en mes. Zo laat een launcher die de icoongrootte normaliseert het icoon even groot
-  als de andere icoontjes, in plaats van het te vergroten omdat er weinig inhoud is.
--->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <!-- bord: witte rand en crèmekleurig midden -->
-    <path android:fillColor="#FFFFFFFF" android:pathData="M54,54m-32,0a32,32 0,1 1,64 0a32,32 0,1 1,-64 0" />
-    <path android:fillColor="#FFFBEBD7" android:pathData="M54,54m-25,0a25,25 0,1 1,50 0a25,25 0,1 1,-50 0" />
+    <!-- bord -->
+    <path android:fillColor="#FFFFFFFF" android:pathData="M54,54m-19,0a19,19 0,1 1,38 0a19,19 0,1 1,-38 0" />
+    <path android:fillColor="#FFE8C9A8" android:pathData="M54,54m-14,0a14,14 0,1 1,28 0a14,14 0,1 1,-28 0" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M54,54m-12,0a12,12 0,1 1,24 0a12,12 0,1 1,-24 0" />
     <!-- vork -->
-    <path android:fillColor="#FF9A4F00"
-        android:pathData="M39.4,36h1.8v9.5h-1.8zM43.1,36h1.8v9.5h-1.8zM46.8,36h1.8v9.5h-1.8zM39.4,44.5h9.2v2.6c0,1.7 -1.5,3 -3.6,3.2v22.2h-2v-22.2c-2.1,-0.2 -3.6,-1.5 -3.6,-3.2z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M26.5,36h1.6v9h-1.6zM29.6,36h1.6v9h-1.6zM32.7,36h1.6v9h-1.6zM26.5,44h7.8v2.4h-7.8zM29.6,46h1.6v26h-1.6z" />
     <!-- mes -->
-    <path android:fillColor="#FF9A4F00"
-        android:pathData="M64.5,35.5c3.6,0 5.4,3.8 5.4,9.6l-0.2,11h-5.2zM64.1,55.5h2.2v18h-2.2z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M77,36c3,0 4.5,3 4.5,8l-0.2,10h-4.3zM77,54h1.6v18h-1.6z" />
 </vector>
