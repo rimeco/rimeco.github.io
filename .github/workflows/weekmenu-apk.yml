@@ -17,6 +17,8 @@ jobs:
         working-directory: weekmenu
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # volledige historiek: het versienummer is het aantal commits
 
       - uses: actions/setup-java@v4
         with:

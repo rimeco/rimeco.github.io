@@ -6,6 +6,12 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+// Versienummer = aantal commits in de repo: stijgt bij elke wijziging, dus de app-info toont niet steeds "1.0"
+// en een nieuwere APK heeft altijd een hogere versionCode (updates over de oude heen blijven mogelijk).
+val commitCount: Int = runCatching {
+    providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }.standardOutput.asText.get().trim().toInt()
+}.getOrDefault(1)
+
 android {
     namespace = "be.rimeco.weekmenu"
     compileSdk = 35
@@ -15,8 +21,8 @@ android {
         applicationId = "com.jean.weekmenu"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = commitCount
+        versionName = "1.$commitCount"
     }
 
     signingConfigs {

@@ -111,6 +111,7 @@ class AppSmokeTest {
         rule.onNodeWithText("Gezin & synchronisatie").assertExists()
         rule.onNodeWithText("Gezin aanmaken").assertExists()
         rule.onNodeWithText("Aantal personen").assertExists()
+        rule.onNodeWithText("Weekmenu · versie", substring = true).assertExists()
     }
 
     @Test fun addsMissingDessertAndMiscTagsToExistingRecipes() {

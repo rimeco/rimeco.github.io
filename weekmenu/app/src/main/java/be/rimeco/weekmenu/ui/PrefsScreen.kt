@@ -109,6 +109,10 @@ fun PrefsScreen(vm: AppViewModel, state: AppState) {
             }
             Switch(p.skipStaples, { v -> vm.updatePrefs { it.copy(skipStaples = v) } })
         }
+
+        val context = LocalContext.current
+        val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "?" }
+        Hint("Weekmenu · versie $version")
     }
 }
 
